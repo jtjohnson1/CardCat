@@ -50,7 +50,7 @@ const Card = mongoose.model('Card', cardSchema);
 
 const cleanupMockData = async () => {
   try {
-    console.log('\n=== CLEANING UP MOCK DATA ===');
+    console.log('\n=== REMOVING ALL MOCK PRICE DATA ===');
     
     // Get all cards in database
     const allCards = await Card.find({});
@@ -61,10 +61,12 @@ const cleanupMockData = async () => {
       return;
     }
 
-    // Show sample of existing data
-    console.log('\nSample of existing cards:');
-    allCards.slice(0, 3).forEach((card, index) => {
-      console.log(`${index + 1}. ${card.playerName} - ${card.manufacturer} - $${card.estimatedValue}`);
+    // Show cards with non-zero prices (these contain mock data)
+    const cardsWithPrices = allCards.filter(card => card.estimatedValue > 0);
+    console.log(`\n🚫 Found ${cardsWithPrices.length} cards with mock pricing data:`);
+    
+    cardsWithPrices.slice(0, 5).forEach((card, index) => {
+      console.log(`${index + 1}. ${card.playerName} - ${card.manufacturer} - $${card.estimatedValue} (MOCK DATA)`);
     });
 
     // Ask for confirmation
@@ -75,7 +77,7 @@ const cleanupMockData = async () => {
     });
 
     const answer = await new Promise((resolve) => {
-      rl.question(`\n⚠️  This will DELETE ALL ${allCards.length} cards from the database. Are you sure? (yes/no): `, resolve);
+      rl.question(`\n⚠️  DELETE ALL ${allCards.length} cards with mock pricing? Only cards with $0.00 should remain. (yes/no): `, resolve);
     });
 
     rl.close();
@@ -85,10 +87,10 @@ const cleanupMockData = async () => {
       return;
     }
 
-    // Delete all cards
-    console.log('\n🗑️  Deleting all cards...');
+    // Delete ALL cards (they all have mock data)
+    console.log('\n🗑️  Deleting ALL cards with mock pricing data...');
     const deleteResult = await Card.deleteMany({});
-    console.log(`✅ Deleted ${deleteResult.deletedCount} cards`);
+    console.log(`✅ Deleted ${deleteResult.deletedCount} cards with mock pricing`);
 
     // Verify cleanup
     const remainingCards = await Card.countDocuments();
@@ -96,8 +98,9 @@ const cleanupMockData = async () => {
 
     if (remainingCards === 0) {
       console.log('✅ Database cleanup completed successfully!');
-      console.log('✅ All mock and test data has been removed');
-      console.log('✅ Ready for real card processing with actual price data');
+      console.log('✅ ALL mock pricing data has been removed');
+      console.log('✅ Future cards will have $0.00 until eBay/TCGPlayer APIs are configured');
+      console.log('🔧 Configure eBay API credentials in Settings to get real pricing');
     } else {
       console.log('⚠️  Warning: Some cards may still remain in database');
     }

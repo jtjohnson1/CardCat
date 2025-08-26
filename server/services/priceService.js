@@ -15,47 +15,54 @@ class PriceService {
    * Get price comparisons from multiple sources
    */
   async getPriceComparisons(cardData) {
-    console.log('\n=== PRICE SERVICE: Getting price comparisons ===');
+    console.log('\n=== PRICE SERVICE: Getting price comparisons (REAL DATA ONLY) ===');
     console.log('Card data:', cardData);
 
     const priceComparisons = [];
 
     try {
-      // Get eBay prices
-      if (this.ebayConfig.appId) {
+      // Get eBay prices ONLY if properly configured
+      if (this.ebayConfig.appId && this.ebayConfig.devId && this.ebayConfig.certId && this.ebayConfig.rotatingKey) {
         try {
+          console.log('✅ eBay API is configured - attempting real price lookup...');
           const ebayPrices = await this.getEbayPrices(cardData);
           priceComparisons.push(...ebayPrices);
-          console.log(`Retrieved ${ebayPrices.length} eBay prices`);
+          console.log(`✅ Retrieved ${ebayPrices.length} REAL eBay prices`);
         } catch (error) {
-          console.error('eBay price lookup failed:', error.message);
+          console.error('❌ eBay price lookup failed:', error.message);
         }
+      } else {
+        console.log('⚠️ eBay API not configured - skipping eBay price lookup');
+        console.log('eBay config status:', {
+          appId: !!this.ebayConfig.appId,
+          devId: !!this.ebayConfig.devId,
+          certId: !!this.ebayConfig.certId,
+          rotatingKey: !!this.ebayConfig.rotatingKey
+        });
       }
 
-      // Get TCGPlayer prices
-      try {
-        const tcgPlayerPrices = await this.getTCGPlayerPrices(cardData);
-        priceComparisons.push(...tcgPlayerPrices);
-        console.log(`Retrieved ${tcgPlayerPrices.length} TCGPlayer prices`);
-      } catch (error) {
-        console.error('TCGPlayer price lookup failed:', error.message);
-      }
+      // Get TCGPlayer prices ONLY if properly configured (currently not implemented)
+      console.log('⚠️ TCGPlayer API not implemented - skipping TCGPlayer price lookup');
+      // NO MOCK DATA - just skip TCGPlayer entirely until real API is implemented
 
-      // Calculate average price
+      // Calculate average price from REAL data only
       const averagePrice = priceComparisons.length > 0
         ? priceComparisons.reduce((sum, price) => sum + price.price, 0) / priceComparisons.length
         : 0;
 
-      console.log(`Total price comparisons: ${priceComparisons.length}, Average: $${averagePrice.toFixed(2)}`);
+      console.log(`🔍 PRICE LOOKUP RESULTS:`);
+      console.log(`- Total REAL price comparisons: ${priceComparisons.length}`);
+      console.log(`- Average price from REAL data: $${averagePrice.toFixed(2)}`);
+      console.log(`- NO MOCK DATA USED`);
 
       return {
         priceComparisons,
         averagePrice,
-        estimatedValue: averagePrice
+        estimatedValue: averagePrice // Will be 0 if no real data available
       };
 
     } catch (error) {
-      console.error('Error getting price comparisons:', error);
+      console.error('❌ Error getting price comparisons:', error);
       return {
         priceComparisons: [],
         averagePrice: 0,
@@ -69,7 +76,7 @@ class PriceService {
    */
   async getEbayPrices(cardData) {
     try {
-      console.log('Fetching eBay prices...');
+      console.log('🔍 Fetching REAL eBay prices...');
 
       // Build search query
       let searchQuery = `${cardData.playerName} ${cardData.year} ${cardData.manufacturer}`;
@@ -130,53 +137,31 @@ class PriceService {
         };
       });
 
+      console.log(`✅ Retrieved ${prices.length} REAL eBay prices`);
       return prices;
 
     } catch (error) {
-      console.error('Error fetching eBay prices:', error.message);
+      console.error('❌ Error fetching eBay prices:', error.message);
       throw error;
     }
   }
 
   /**
-   * Get TCGPlayer prices for a card (mock implementation for now)
+   * Get TCGPlayer prices for a card (NOT IMPLEMENTED - NO MOCK DATA)
    */
   async getTCGPlayerPrices(cardData) {
-    try {
-      console.log('Fetching TCGPlayer prices...');
-
-      // For now, return mock TCGPlayer data since we don't have API access
-      // In a real implementation, you would integrate with TCGPlayer's API
-      const mockPrices = [];
-
-      // Only add TCGPlayer data for sports cards that might be on TCGPlayer
-      if (cardData.sport && (cardData.sport.toLowerCase().includes('baseball') || 
-                            cardData.sport.toLowerCase().includes('football') ||
-                            cardData.sport.toLowerCase().includes('basketball'))) {
-        
-        // Generate realistic price range based on card attributes
-        let basePrice = 5;
-        if (cardData.specialFeatures.includes('Rookie Card')) basePrice *= 2;
-        if (cardData.specialFeatures.includes('Autograph')) basePrice *= 5;
-        if (cardData.year < 2000) basePrice *= 1.5;
-
-        mockPrices.push({
-          source: 'TCGPlayer',
-          price: basePrice + Math.random() * 10,
-          condition: 'Near Mint',
-          title: `${cardData.playerName} ${cardData.year} ${cardData.manufacturer}`,
-          url: 'https://www.tcgplayer.com',
-          lastUpdated: new Date().toISOString()
-        });
-      }
-
-      console.log(`TCGPlayer returned ${mockPrices.length} prices`);
-      return mockPrices;
-
-    } catch (error) {
-      console.error('Error fetching TCGPlayer prices:', error.message);
-      throw error;
-    }
+    console.log('⚠️ TCGPlayer API integration not implemented');
+    console.log('🚫 NO MOCK DATA WILL BE GENERATED');
+    
+    // Return empty array - NO MOCK DATA
+    return [];
+    
+    // TODO: Implement real TCGPlayer API integration here
+    // This would require:
+    // 1. TCGPlayer API credentials
+    // 2. Proper API endpoints
+    // 3. Authentication handling
+    // 4. Real price data parsing
   }
 }
 
