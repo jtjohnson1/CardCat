@@ -23,42 +23,23 @@ interface FileGridProps {
 export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
 
-  const handleImageError = (imageId: string, imagePath: string, error: any) => {
-    console.error('=== IMAGE ERROR DEBUG ===')
-    console.error(`Image failed to load: ${imageId}`)
-    console.error(`Image path: ${imagePath}`)
-    console.error('Error details:', error)
-    console.error('Error target src:', error.target?.src)
-    console.error('Error target naturalWidth:', error.target?.naturalWidth)
-    console.error('Error target naturalHeight:', error.target?.naturalHeight)
-    console.error('=== END IMAGE ERROR DEBUG ===')
+  const handleImageError = (imageId: string, imagePath: string) => {
+    console.error(`Image failed to load: ${imageId} - Path: ${imagePath}`)
     setImageErrors(prev => new Set(prev).add(imageId))
   }
 
   const getImageUrl = (imagePath: string) => {
-    console.log('=== IMAGE URL CONSTRUCTION DEBUG ===')
-    console.log('Original image path:', imagePath)
-    
-    // Encode the file path to handle spaces and special characters
+    // imagePath is now a raw file system path like "/opt/cardimg/lot1-00001-front.jpg"
+    // Encode it once for the URL
     const encodedPath = encodeURIComponent(imagePath)
-    console.log('Encoded path:', encodedPath)
-    
     const url = `http://localhost:3000/api/images/${encodedPath}`
-    console.log('Final constructed URL:', url)
-    console.log('=== END IMAGE URL CONSTRUCTION DEBUG ===')
-    
+    console.log(`Constructed image URL: ${url} for path: ${imagePath}`)
     return url
   }
 
-  console.log('=== FILEGRID RENDER DEBUG ===')
-  console.log(`FileGrid rendering with ${files.length} files`)
-  console.log('Files data:', files)
-  console.log('Loading state:', loading)
-  console.log('Image errors:', Array.from(imageErrors))
-  console.log('=== END FILEGRID RENDER DEBUG ===')
+  console.log(`FileGrid rendering with ${files.length} files:`, files)
 
   if (loading) {
-    console.log('FileGrid: Rendering loading skeletons')
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, index) => (
@@ -73,7 +54,6 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
   }
 
   if (files.length === 0) {
-    console.log('FileGrid: No files to display')
     return (
       <div className="text-center py-12 text-gray-500 dark:text-gray-400">
         <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -85,24 +65,14 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
     )
   }
 
-  console.log('FileGrid: Rendering file grid with', files.length, 'files')
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {files.map((file) => {
-        console.log('=== FILE CARD RENDER DEBUG ===')
-        console.log('Rendering file card for:', file.filename)
-        console.log('File data:', file)
-        console.log('Front image path:', file.frontImage)
-        console.log('Back image path:', file.backImage)
-        console.log('File valid:', file.valid)
-        console.log('File selected:', file.selected)
-        
-        const frontImageUrl = getImageUrl(file.frontImage)
-        const backImageUrl = getImageUrl(file.backImage)
-        console.log('Front image URL:', frontImageUrl)
-        console.log('Back image URL:', backImageUrl)
-        console.log('=== END FILE CARD RENDER DEBUG ===')
+        console.log(`Rendering file card:`, file)
+        const frontUrl = getImageUrl(file.frontImage)
+        const backUrl = getImageUrl(file.backImage)
+        console.log(`Front URL: ${frontUrl}`)
+        console.log(`Back URL: ${backUrl}`)
         
         return (
           <Card
@@ -115,13 +85,7 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
               <div className="flex items-start justify-between mb-3">
                 <Checkbox
                   checked={file.selected}
-                  onCheckedChange={(checked) => {
-                    console.log('=== CHECKBOX CHANGE DEBUG ===')
-                    console.log('File ID:', file.id)
-                    console.log('New checked state:', checked)
-                    console.log('=== END CHECKBOX CHANGE DEBUG ===')
-                    onFileSelect(file.id, checked as boolean)
-                  }}
+                  onCheckedChange={(checked) => onFileSelect(file.id, checked as boolean)}
                   className="mt-1"
                 />
                 <Badge variant={file.valid ? "default" : "destructive"} className="text-xs">
@@ -144,19 +108,11 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
                       </div>
                     ) : (
                       <img
-                        src={frontImageUrl}
+                        src={frontUrl}
                         alt={`${file.filename} front`}
                         className="w-full h-20 object-cover rounded border"
-                        onError={(error) => {
-                          console.log('=== FRONT IMAGE ERROR ===')
-                          handleImageError(`${file.id}-front`, file.frontImage, error)
-                        }}
-                        onLoad={() => {
-                          console.log('=== FRONT IMAGE SUCCESS ===')
-                          console.log(`Front image loaded successfully: ${file.frontImage}`)
-                          console.log('Image URL that loaded:', frontImageUrl)
-                          console.log('=== END FRONT IMAGE SUCCESS ===')
-                        }}
+                        onError={() => handleImageError(`${file.id}-front`, file.frontImage)}
+                        onLoad={() => console.log(`Front image loaded successfully: ${file.frontImage}`)}
                       />
                     )}
                   </div>
@@ -168,19 +124,11 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
                       </div>
                     ) : (
                       <img
-                        src={backImageUrl}
+                        src={backUrl}
                         alt={`${file.filename} back`}
                         className="w-full h-20 object-cover rounded border"
-                        onError={(error) => {
-                          console.log('=== BACK IMAGE ERROR ===')
-                          handleImageError(`${file.id}-back`, file.backImage, error)
-                        }}
-                        onLoad={() => {
-                          console.log('=== BACK IMAGE SUCCESS ===')
-                          console.log(`Back image loaded successfully: ${file.backImage}`)
-                          console.log('Image URL that loaded:', backImageUrl)
-                          console.log('=== END BACK IMAGE SUCCESS ===')
-                        }}
+                        onError={() => handleImageError(`${file.id}-back`, file.backImage)}
+                        onLoad={() => console.log(`Back image loaded successfully: ${file.backImage}`)}
                       />
                     )}
                   </div>
