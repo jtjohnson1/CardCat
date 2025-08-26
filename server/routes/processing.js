@@ -3,8 +3,6 @@ const router = express.Router();
 const fs = require('fs').promises;
 const path = require('path');
 const ollamaService = require('../services/ollamaService');
-const priceService = require('../services/priceService');
-const Card = require('../models/Card');
 
 // Helper function to check if file is an image
 const isImageFile = (filename) => {
@@ -209,7 +207,7 @@ router.post('/process', async (req, res) => {
   try {
     const { fileIds } = req.body;
 
-    console.log('\n=== PROCESSING CARDS WITH REAL PRICE DATA ONLY ===');
+    console.log('\n=== PROCESSING CARDS WITH OLLAMA ===');
     console.log('Processing cards request:', { fileIds });
 
     if (!fileIds || !Array.isArray(fileIds)) {
@@ -218,26 +216,17 @@ router.post('/process', async (req, res) => {
       });
     }
 
-    console.log(`Starting to process ${fileIds.length} card files with Ollama and REAL price lookup...`);
+    console.log(`Starting to process ${fileIds.length} card files with Ollama...`);
 
     const processedCards = [];
     const errors = [];
-    const skippedCards = [];
 
-    // Process each card with Ollama and REAL price lookup
+    // Process each card with Ollama
     for (let i = 0; i < fileIds.length; i++) {
       const fileId = fileIds[i];
       console.log(`\n--- Processing card ${i + 1}/${fileIds.length}: ${fileId} ---`);
 
       try {
-        // Check if card already exists in database
-        const existingCard = await Card.findOne({ id: fileId });
-        if (existingCard) {
-          console.log(`⚠️ Card ${fileId} already exists in database, skipping...`);
-          skippedCards.push(fileId);
-          continue;
-        }
-
         // For now, we need to reconstruct the file paths from the fileId
         // This is a limitation of the current design - we should store the full paths
         // For demonstration, let's assume the files are in /opt/cardimg
@@ -276,74 +265,43 @@ router.post('/process', async (req, res) => {
           backAnalysis?.analysis
         );
 
-        // MANDATORY: Get REAL price data from eBay and TCGPlayer
-        console.log(`🔍 FETCHING REAL MARKET PRICES (NO MOCK DATA)...`);
-        const priceData = await priceService.getPriceComparisons(cardData);
-
-        // ONLY use real price data - no fallbacks to mock values
-        if (priceData.estimatedValue > 0) {
-          cardData.estimatedValue = priceData.estimatedValue;
-          console.log(`✅ Real price data obtained: $${cardData.estimatedValue.toFixed(2)}`);
-        } else {
-          console.log(`⚠️ No real price data available - setting to $0.00 (no mock data used)`);
-          cardData.estimatedValue = 0;
-        }
-
         // Add metadata
         cardData.id = fileId;
-        cardData.processedAt = new Date();
+        cardData.processedAt = new Date().toISOString();
         cardData.frontImagePath = frontImagePath;
         cardData.backImagePath = backImagePath;
 
-        // Save to MongoDB with REAL pricing only
-        console.log(`💾 Saving card to MongoDB with REAL price data only...`);
-        const card = new Card(cardData);
-        await card.save();
-        console.log(`✅ Card saved to MongoDB with ID: ${card._id}, REAL Estimated Value: $${cardData.estimatedValue.toFixed(2)}`);
-
         processedCards.push(cardData);
-        console.log(`✅ Successfully processed card with REAL pricing: ${fileId}`);
+        console.log(`✅ Successfully processed card with Ollama: ${fileId}`);
 
       } catch (error) {
-        console.error(`❌ Error processing card ${fileId}:`, error.message);
+        console.error(`❌ Error processing card ${fileId} with Ollama:`, error.message);
         errors.push(`Failed to process ${fileId}: ${error.message}`);
       }
     }
 
-    console.log(`\n=== PROCESSING SUMMARY (REAL DATA ONLY) ===`);
-    console.log(`✅ Processing completed. Success: ${processedCards.length}, Skipped: ${skippedCards.length}, Errors: ${errors.length}`);
-    console.log(`🚫 NO MOCK DATA WAS USED - ALL PRICES ARE REAL OR $0.00`);
-
+    console.log(`\n=== OLLAMA PROCESSING SUMMARY ===`);
+    console.log(`✅ Processing completed. Success: ${processedCards.length}, Errors: ${errors.length}`);
+    
     if (processedCards.length > 0) {
-      console.log(`Sample processed card with REAL pricing:`, {
-        id: processedCards[0].id,
-        playerName: processedCards[0].playerName,
-        estimatedValue: processedCards[0].estimatedValue
-      });
+      console.log(`Sample processed card:`, processedCards[0]);
     }
-
-    if (skippedCards.length > 0) {
-      console.log(`Skipped cards (already exist):`, skippedCards);
-    }
-
+    
     if (errors.length > 0) {
       console.log(`Errors:`, errors);
     }
 
     res.json({
-      success: processedCards.length > 0 || skippedCards.length > 0,
+      success: processedCards.length > 0,
       processedCount: processedCards.length,
-      skippedCount: skippedCards.length,
       processedCards: processedCards,
-      skippedCards: skippedCards,
-      errors: errors,
-      message: `Processed ${processedCards.length} new cards with REAL pricing only, skipped ${skippedCards.length} existing cards. NO MOCK DATA USED.`
+      errors: errors
     });
 
   } catch (error) {
-    console.error('❌ Error in card processing:', error);
+    console.error('❌ Error in Ollama processing:', error);
     res.status(500).json({
-      error: 'Failed to process cards',
+      error: 'Failed to process cards with Ollama',
       message: error.message
     });
   }

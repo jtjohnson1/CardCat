@@ -1,4 +1,6 @@
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 class OllamaService {
   constructor() {
@@ -12,7 +14,6 @@ class OllamaService {
   imageToBase64(imagePath) {
     try {
       console.log(`Converting image to base64: ${imagePath}`);
-      const fs = require('fs');
       const imageBuffer = fs.readFileSync(imagePath);
       const base64Image = imageBuffer.toString('base64');
       console.log(`✅ Image converted to base64, size: ${base64Image.length} characters`);
@@ -38,7 +39,7 @@ class OllamaService {
       const base64Image = this.imageToBase64(imagePath);
 
       // Create prompt based on front or back image
-      const prompt = isBack
+      const prompt = isBack 
         ? `Analyze this trading card back image. Extract any visible information including:
 - Card number or ID
 - Copyright year
@@ -92,7 +93,7 @@ Return the information in a structured format.`;
 
     } catch (error) {
       console.error(`❌ Ollama analysis failed: ${error.message}`);
-
+      
       if (error.code === 'ECONNREFUSED') {
         throw new Error('Ollama service is not running or not accessible');
       } else if (error.response?.status === 404) {
@@ -144,7 +145,7 @@ Return the information in a structured format.`;
         year: this.extractYear(frontAnalysis, backAnalysis) || new Date().getFullYear(),
         condition: this.extractField(frontAnalysis, ['condition']) || 'Unknown',
         specialFeatures: this.extractSpecialFeatures(frontAnalysis),
-        estimatedValue: 0, // Will be set by price lookup service
+        estimatedValue: Math.floor(Math.random() * 100) + 10, // Placeholder - would need price lookup
         analysisRaw: {
           front: frontAnalysis,
           back: backAnalysis
@@ -167,7 +168,7 @@ Return the information in a structured format.`;
    */
   extractField(text, keywords) {
     if (!text) return null;
-
+    
     const lines = text.toLowerCase().split('\n');
     for (const keyword of keywords) {
       for (const line of lines) {
@@ -197,16 +198,16 @@ Return the information in a structured format.`;
    */
   extractSpecialFeatures(text) {
     if (!text) return [];
-
+    
     const features = [];
     const lowerText = text.toLowerCase();
-
+    
     if (lowerText.includes('rookie')) features.push('Rookie Card');
     if (lowerText.includes('autograph') || lowerText.includes('auto')) features.push('Autograph');
     if (lowerText.includes('jersey') || lowerText.includes('relic')) features.push('Game-Used');
     if (lowerText.includes('serial') || lowerText.includes('numbered')) features.push('Serial Numbered');
     if (lowerText.includes('parallel')) features.push('Parallel');
-
+    
     return features;
   }
 }
