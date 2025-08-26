@@ -12,27 +12,29 @@ import {
   Search,
   Filter,
   Trash2,
-  Eye
+  RefreshCw
 } from "lucide-react"
-import { getCards, deleteCards } from "../api/cards"
+import { getCards, deleteSelectedCards } from "../api/cards"
 import { useToast } from "../hooks/useToast"
 
-interface CardData {
+interface Card {
   _id: string
-  frontImage: string
-  backImage: string
   manufacturer: string
   sport: string
   setName: string
   cardNumber: string
-  player: string
+  playerName: string
+  team: string
   year: number
   estimatedValue: number
-  processingDate: string
-  selected?: boolean
+  frontImage?: string
+  backImage?: string
+  condition?: string
+  specialFeatures?: string[]
+  processedAt: string
 }
 
-interface FilterOptions {
+interface Filters {
   manufacturer: string
   sport: string
   yearRange: [number, number]
@@ -40,148 +42,106 @@ interface FilterOptions {
 }
 
 export function CardDatabase() {
-  const [cards, setCards] = useState<CardData[]>([])
-  const [filteredCards, setFilteredCards] = useState<CardData[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [filters, setFilters] = useState<FilterOptions>({
+  const [cards, setCards] = useState<Card[]>([])
+  const [filteredCards, setFilteredCards] = useState<Card[]>([])
+  const [selectedCards, setSelectedCards] = useState<string[]>([])
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filters, setFilters] = useState<Filters>({
     manufacturer: "",
     sport: "",
-    yearRange: [1950, 2024],
+    yearRange: [1980, 2024],
     valueRange: [0, 1000]
   })
-  const [selectedCard, setSelectedCard] = useState<CardData | null>(null)
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [sortField, setSortField] = useState<keyof CardData>("processingDate")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+  const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
-  useEffect(() => {
-    const fetchCards = async () => {
-      try {
-        console.log('Fetching cards from database...')
-        const data = await getCards()
-        setCards(data.cards)
-        setFilteredCards(data.cards)
-      } catch (error) {
-        console.error('Failed to fetch cards:', error)
-        toast({
-          title: "Error",
-          description: "Failed to load card database",
-          variant: "destructive"
-        })
-      } finally {
-        setLoading(false)
-      }
+  const loadCards = async () => {
+    setLoading(true)
+    try {
+      const response = await getCards()
+      setCards(response.data.cards || [])
+      setFilteredCards(response.data.cards || [])
+    } catch (error) {
+      console.error('Failed to load cards:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load cards from database",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
     }
-
-    fetchCards()
-  }, [toast])
+  }
 
   useEffect(() => {
-    let filtered = [...cards]
+    loadCards()
+  }, [])
 
-    // Apply search filter
-    if (searchQuery) {
-      filtered = filtered.filter(card =>
-        card.player.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.setName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.manufacturer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.sport.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    }
+  useEffect(() => {
+    let filtered = cards.filter(card => {
+      const matchesSearch = searchTerm === "" || 
+        card.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.team.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.setName.toLowerCase().includes(searchTerm.toLowerCase())
 
-    // Apply filters
-    if (filters.manufacturer) {
-      filtered = filtered.filter(card => card.manufacturer === filters.manufacturer)
-    }
-    if (filters.sport) {
-      filtered = filtered.filter(card => card.sport === filters.sport)
-    }
-    filtered = filtered.filter(card =>
-      card.year >= filters.yearRange[0] && card.year <= filters.yearRange[1]
-    )
-    filtered = filtered.filter(card =>
-      card.estimatedValue >= filters.valueRange[0] && card.estimatedValue <= filters.valueRange[1]
-    )
+      const matchesManufacturer = filters.manufacturer === "" || 
+        card.manufacturer === filters.manufacturer
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      const aValue = a[sortField]
-      const bValue = b[sortField]
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue)
-      }
-      
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
-      }
-      
-      return 0
+      const matchesSport = filters.sport === "" || 
+        card.sport === filters.sport
+
+      const matchesYear = card.year >= filters.yearRange[0] && 
+        card.year <= filters.yearRange[1]
+
+      const matchesValue = card.estimatedValue >= filters.valueRange[0] && 
+        card.estimatedValue <= filters.valueRange[1]
+
+      return matchesSearch && matchesManufacturer && matchesSport && 
+             matchesYear && matchesValue
     })
 
     setFilteredCards(filtered)
-  }, [cards, searchQuery, filters, sortField, sortDirection])
-
-  const handleSort = (field: keyof CardData) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDirection('asc')
-    }
-  }
-
-  const handleSelectAll = () => {
-    const allSelected = filteredCards.every(card => card.selected)
-    setFilteredCards(filteredCards.map(card => ({ ...card, selected: !allSelected })))
-  }
-
-  const handleCardSelect = (cardId: string, selected: boolean) => {
-    setFilteredCards(filteredCards.map(card =>
-      card._id === cardId ? { ...card, selected } : card
-    ))
-  }
+  }, [cards, searchTerm, filters])
 
   const handleDeleteSelected = async () => {
-    const selectedCards = filteredCards.filter(card => card.selected)
-    if (selectedCards.length === 0) {
-      toast({
-        title: "No Cards Selected",
-        description: "Please select at least one card to delete",
-        variant: "destructive"
-      })
-      return
-    }
+    if (selectedCards.length === 0) return
 
     try {
-      console.log('Deleting selected cards:', selectedCards.length)
-      await deleteCards(selectedCards.map(card => card._id))
-      
-      // Remove deleted cards from state
-      const deletedIds = selectedCards.map(card => card._id)
-      setCards(cards.filter(card => !deletedIds.includes(card._id)))
-      
+      await deleteSelectedCards(selectedCards)
       toast({
-        title: "Cards Deleted",
-        description: `Successfully deleted ${selectedCards.length} cards`
+        title: "Success",
+        description: `Deleted ${selectedCards.length} cards`
       })
+      setSelectedCards([])
+      setShowDeleteDialog(false)
+      await loadCards()
     } catch (error) {
       console.error('Failed to delete cards:', error)
       toast({
-        title: "Delete Failed",
+        title: "Error",
         description: "Failed to delete selected cards",
         variant: "destructive"
       })
     }
-    
-    setShowDeleteDialog(false)
   }
 
-  const selectedCount = filteredCards.filter(card => card.selected).length
+  const handleSelectAll = () => {
+    if (selectedCards.length === filteredCards.length) {
+      setSelectedCards([])
+    } else {
+      setSelectedCards(filteredCards.map(card => card._id))
+    }
+  }
+
+  const handleCardSelect = (cardId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedCards([...selectedCards, cardId])
+    } else {
+      setSelectedCards(selectedCards.filter(id => id !== cardId))
+    }
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-500">
@@ -191,22 +151,27 @@ export function CardDatabase() {
             Card Database
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Browse and manage your processed card collection
+            Manage and browse your card collection
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-sm">
-            {filteredCards.length} cards
-          </Badge>
-          {selectedCount > 0 && (
+          <Button
+            variant="outline"
+            onClick={loadCards}
+            disabled={loading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          {selectedCards.length > 0 && (
             <Button
               variant="destructive"
-              size="sm"
               onClick={() => setShowDeleteDialog(true)}
               className="flex items-center gap-2"
             >
               <Trash2 className="w-4 h-4" />
-              Delete Selected ({selectedCount})
+              Delete Selected ({selectedCards.length})
             </Button>
           )}
         </div>
@@ -227,27 +192,18 @@ export function CardDatabase() {
           <div className="flex gap-4">
             <div className="flex-1">
               <Input
-                placeholder="Search by player, set, manufacturer, or sport..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by player name, team, or set..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="bg-white dark:bg-gray-800"
               />
             </div>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              Advanced Filters
-            </Button>
           </div>
-          
-          <CardFilters
-            filters={filters}
-            onFiltersChange={setFilters}
-            cards={cards}
-          />
+          <CardFilters filters={filters} onFiltersChange={setFilters} />
         </CardContent>
       </Card>
 
-      {/* Cards Table */}
+      {/* Results */}
       <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -257,28 +213,28 @@ export function CardDatabase() {
                 Card Collection
               </CardTitle>
               <CardDescription>
-                {filteredCards.length} cards found
+                {filteredCards.length} of {cards.length} cards
               </CardDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSelectAll}
-              className="flex items-center gap-2"
-            >
-              {filteredCards.every(card => card.selected) ? 'Deselect All' : 'Select All'}
-            </Button>
+            {filteredCards.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAll}
+                className="flex items-center gap-2"
+              >
+                {selectedCards.length === filteredCards.length ? 'Deselect All' : 'Select All'}
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
           <CardTable
             cards={filteredCards}
-            loading={loading}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onSort={handleSort}
+            selectedCards={selectedCards}
             onCardSelect={handleCardSelect}
-            onCardView={(card) => setSelectedCard(card)}
+            onCardClick={setSelectedCard}
+            loading={loading}
           />
         </CardContent>
       </Card>
@@ -287,17 +243,18 @@ export function CardDatabase() {
       {selectedCard && (
         <CardDetailModal
           card={selectedCard}
-          open={!!selectedCard}
+          isOpen={!!selectedCard}
           onClose={() => setSelectedCard(null)}
         />
       )}
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
-        open={showDeleteDialog}
+        isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleDeleteSelected}
-        count={selectedCount}
+        itemCount={selectedCards.length}
+        itemType="cards"
       />
     </div>
   )
