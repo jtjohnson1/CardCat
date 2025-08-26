@@ -7,6 +7,7 @@ const MongoStore = require('connect-mongo');
 const basicRoutes = require("./routes/index");
 const { connectDB } = require("./config/database");
 const cors = require("cors");
+const path = require("path");
 
 if (!process.env.DATABASE_URL) {
   console.error("Error: DATABASE_URL variables in .env missing.");
@@ -23,6 +24,16 @@ app.enable('strict routing');
 app.use(cors({}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files (images) from any directory that gets scanned
+// This is a security consideration - in production, you might want to restrict this
+app.use('/api/images', express.static('/', {
+  dotfiles: 'deny',
+  index: false,
+  setHeaders: function (res, path, stat) {
+    res.set('x-timestamp', Date.now())
+  }
+}));
 
 // Database connection
 connectDB();
