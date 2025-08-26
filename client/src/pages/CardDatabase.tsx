@@ -181,23 +181,37 @@ export function CardDatabase() {
   }
 
   const handleCardSelect = (cardId: string, selected: boolean) => {
+    console.log('\n=== HANDLE CARD SELECT ===')
     console.log('Card selection changed:', cardId, selected)
+    console.log('Current selectedCards before change:', selectedCards)
+    
     if (selected) {
-      setSelectedCards(prev => [...prev, cardId])
+      const newSelection = [...selectedCards, cardId]
+      console.log('Adding card to selection. New selection:', newSelection)
+      setSelectedCards(newSelection)
     } else {
-      setSelectedCards(prev => prev.filter(id => id !== cardId))
+      const newSelection = selectedCards.filter(id => id !== cardId)
+      console.log('Removing card from selection. New selection:', newSelection)
+      setSelectedCards(newSelection)
     }
   }
 
   const handleSelectAll = () => {
+    console.log('\n=== HANDLE SELECT ALL ===')
     console.log('Select all toggled')
+    console.log('Current selectedCards:', selectedCards)
+    console.log('Current filteredCards count:', filteredCards.length)
+    
     const allSelected = selectedCards.length === filteredCards.length
+    console.log('All selected?', allSelected)
+    
     if (allSelected) {
       console.log('Deselecting all cards')
       setSelectedCards([])
     } else {
-      console.log('Selecting all filtered cards:', filteredCards.length)
-      setSelectedCards(filteredCards.map(card => card._id))
+      const newSelection = filteredCards.map(card => card._id)
+      console.log('Selecting all filtered cards:', newSelection)
+      setSelectedCards(newSelection)
     }
   }
 
@@ -208,8 +222,14 @@ export function CardDatabase() {
   }
 
   const handleDeleteSelected = () => {
-    console.log('Delete selected clicked, selected cards:', selectedCards.length)
+    console.log('\n=== HANDLE DELETE SELECTED BUTTON CLICKED ===')
+    console.log('Delete selected button clicked!')
+    console.log('Current selectedCards:', selectedCards)
+    console.log('Selected cards count:', selectedCards.length)
+    console.log('Button should be visible?', selectedCards.length > 0)
+    
     if (selectedCards.length === 0) {
+      console.log('❌ No cards selected, showing toast')
       toast({
         title: "No Cards Selected",
         description: "Please select at least one card to delete",
@@ -217,7 +237,11 @@ export function CardDatabase() {
       })
       return
     }
+    
+    console.log('✅ Cards selected, showing delete dialog')
+    console.log('Setting showDeleteDialog to true...')
     setShowDeleteDialog(true)
+    console.log('showDeleteDialog should now be true')
   }
 
   const handleDeleteCard = (cardId: string) => {
@@ -306,8 +330,10 @@ export function CardDatabase() {
   console.log('Total cards:', cards.length)
   console.log('Filtered cards:', filteredCards.length)
   console.log('Selected cards:', selectedCards.length)
+  console.log('Selected cards array:', selectedCards)
   console.log('Show delete dialog:', showDeleteDialog)
   console.log('Card to delete:', cardToDelete)
+  console.log('Delete Selected button should be visible:', selectedCards.length > 0)
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-500">
@@ -413,7 +439,13 @@ export function CardDatabase() {
             {selectedCards.length > 0 && (
               <Button
                 variant="destructive"
-                onClick={handleDeleteSelected}
+                onClick={() => {
+                  console.log('\n=== DELETE SELECTED BUTTON CLICKED IN JSX ===')
+                  console.log('Button onClick handler triggered')
+                  console.log('About to call handleDeleteSelected...')
+                  handleDeleteSelected()
+                  console.log('handleDeleteSelected call completed')
+                }}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete Selected ({selectedCards.length})
@@ -463,12 +495,17 @@ export function CardDatabase() {
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
         onClose={() => {
-          console.log('Delete dialog closed')
+          console.log('\n=== DELETE DIALOG CLOSED ===')
+          console.log('Delete dialog onClose called')
           setShowDeleteDialog(false)
           setCardToDelete(null)
           setSelectedCards([])
         }}
-        onConfirm={confirmDelete}
+        onConfirm={() => {
+          console.log('\n=== DELETE DIALOG CONFIRMED ===')
+          console.log('Delete dialog onConfirm called')
+          confirmDelete()
+        }}
         itemCount={selectedCards.length}
       />
     </div>

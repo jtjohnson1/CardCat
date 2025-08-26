@@ -67,6 +67,15 @@ export function CardTable({
   const [sortField, setSortField] = useState<SortField>('createdAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
+  console.log('\n=== CARD TABLE RENDER ===')
+  console.log('Cards received:', cards.length)
+  console.log('Selected cards received:', selectedCards.length)
+  console.log('Selected cards array:', selectedCards)
+  console.log('onCardSelect function type:', typeof onCardSelect)
+  console.log('onSelectAll function type:', typeof onSelectAll)
+  console.log('onDeleteSelected function type:', typeof onDeleteSelected)
+  console.log('onDeleteCard function type:', typeof onDeleteCard)
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
@@ -79,7 +88,7 @@ export function CardTable({
   const sortedCards = [...cards].sort((a, b) => {
     const aValue = a[sortField]
     const bValue = b[sortField]
-    
+
     if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
     if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
     return 0
@@ -99,7 +108,7 @@ export function CardTable({
   }
 
   const handleDeleteClick = (card: CardData) => {
-    console.log('\n=== DELETE BUTTON CLICKED ===')
+    console.log('\n=== DELETE BUTTON CLICKED IN TABLE ===')
     console.log('Card to delete:', {
       _id: card._id,
       id: card.id,
@@ -108,13 +117,41 @@ export function CardTable({
     })
     console.log('onDeleteCard function type:', typeof onDeleteCard)
     console.log('onDeleteCard function:', onDeleteCard)
-    
+
     try {
       console.log('Calling onDeleteCard with card._id:', card._id)
       onDeleteCard(card._id)
       console.log('✅ onDeleteCard called successfully')
     } catch (error) {
       console.error('❌ Error calling onDeleteCard:', error)
+    }
+  }
+
+  const handleCheckboxChange = (cardId: string, checked: boolean) => {
+    console.log('\n=== CHECKBOX CHANGE IN TABLE ===')
+    console.log('Card ID:', cardId)
+    console.log('Checked:', checked)
+    console.log('onCardSelect function type:', typeof onCardSelect)
+
+    try {
+      console.log('Calling onCardSelect...')
+      onCardSelect(cardId, checked)
+      console.log('✅ onCardSelect called successfully')
+    } catch (error) {
+      console.error('❌ Error calling onCardSelect:', error)
+    }
+  }
+
+  const handleSelectAllChange = () => {
+    console.log('\n=== SELECT ALL CHANGE IN TABLE ===')
+    console.log('onSelectAll function type:', typeof onSelectAll)
+
+    try {
+      console.log('Calling onSelectAll...')
+      onSelectAll()
+      console.log('✅ onSelectAll called successfully')
+    } catch (error) {
+      console.error('❌ Error calling onSelectAll:', error)
     }
   }
 
@@ -144,7 +181,7 @@ export function CardTable({
                 <TableHead className="w-12">
                   <Checkbox
                     checked={allSelected}
-                    onCheckedChange={onSelectAll}
+                    onCheckedChange={handleSelectAllChange}
                   />
                 </TableHead>
                 <TableHead className="w-32">Images</TableHead>
@@ -237,7 +274,7 @@ export function CardTable({
                   <TableCell>
                     <Checkbox
                       checked={selectedCards.includes(card._id)}
-                      onCheckedChange={(checked) => onCardSelect(card._id, checked as boolean)}
+                      onCheckedChange={(checked) => handleCheckboxChange(card._id, checked as boolean)}
                     />
                   </TableCell>
                   <TableCell>
