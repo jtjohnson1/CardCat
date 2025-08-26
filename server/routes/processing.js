@@ -209,7 +209,7 @@ router.post('/process', async (req, res) => {
   try {
     const { fileIds } = req.body;
 
-    console.log('\n=== PROCESSING CARDS WITH OLLAMA, PRICE LOOKUP, AND MONGODB ===');
+    console.log('\n=== PROCESSING CARDS WITH REAL PRICE DATA ONLY ===');
     console.log('Processing cards request:', { fileIds });
 
     if (!fileIds || !Array.isArray(fileIds)) {
@@ -218,13 +218,13 @@ router.post('/process', async (req, res) => {
       });
     }
 
-    console.log(`Starting to process ${fileIds.length} card files with Ollama and price lookup...`);
+    console.log(`Starting to process ${fileIds.length} card files with Ollama and REAL price lookup...`);
 
     const processedCards = [];
     const errors = [];
     const skippedCards = [];
 
-    // Process each card with Ollama and price lookup
+    // Process each card with Ollama and REAL price lookup
     for (let i = 0; i < fileIds.length; i++) {
       const fileId = fileIds[i];
       console.log(`\n--- Processing card ${i + 1}/${fileIds.length}: ${fileId} ---`);
@@ -276,12 +276,18 @@ router.post('/process', async (req, res) => {
           backAnalysis?.analysis
         );
 
-        // Get real price data from eBay and TCGPlayer
-        console.log(`Looking up real market prices...`);
+        // MANDATORY: Get REAL price data from eBay and TCGPlayer
+        console.log(`🔍 FETCHING REAL MARKET PRICES (NO MOCK DATA)...`);
         const priceData = await priceService.getPriceComparisons(cardData);
-        
-        // Use real price data instead of mock data
-        cardData.estimatedValue = priceData.estimatedValue || 0;
+
+        // ONLY use real price data - no fallbacks to mock values
+        if (priceData.estimatedValue > 0) {
+          cardData.estimatedValue = priceData.estimatedValue;
+          console.log(`✅ Real price data obtained: $${cardData.estimatedValue.toFixed(2)}`);
+        } else {
+          console.log(`⚠️ No real price data available - setting to $0.00 (no mock data used)`);
+          cardData.estimatedValue = 0;
+        }
 
         // Add metadata
         cardData.id = fileId;
@@ -289,14 +295,14 @@ router.post('/process', async (req, res) => {
         cardData.frontImagePath = frontImagePath;
         cardData.backImagePath = backImagePath;
 
-        // Save to MongoDB
-        console.log(`Saving card to MongoDB with real price data...`);
+        // Save to MongoDB with REAL pricing only
+        console.log(`💾 Saving card to MongoDB with REAL price data only...`);
         const card = new Card(cardData);
         await card.save();
-        console.log(`✅ Card saved to MongoDB with ID: ${card._id}, Estimated Value: $${cardData.estimatedValue.toFixed(2)}`);
+        console.log(`✅ Card saved to MongoDB with ID: ${card._id}, REAL Estimated Value: $${cardData.estimatedValue.toFixed(2)}`);
 
         processedCards.push(cardData);
-        console.log(`✅ Successfully processed card with real pricing: ${fileId}`);
+        console.log(`✅ Successfully processed card with REAL pricing: ${fileId}`);
 
       } catch (error) {
         console.error(`❌ Error processing card ${fileId}:`, error.message);
@@ -304,11 +310,12 @@ router.post('/process', async (req, res) => {
       }
     }
 
-    console.log(`\n=== PROCESSING SUMMARY ===`);
+    console.log(`\n=== PROCESSING SUMMARY (REAL DATA ONLY) ===`);
     console.log(`✅ Processing completed. Success: ${processedCards.length}, Skipped: ${skippedCards.length}, Errors: ${errors.length}`);
+    console.log(`🚫 NO MOCK DATA WAS USED - ALL PRICES ARE REAL OR $0.00`);
 
     if (processedCards.length > 0) {
-      console.log(`Sample processed card with real pricing:`, {
+      console.log(`Sample processed card with REAL pricing:`, {
         id: processedCards[0].id,
         playerName: processedCards[0].playerName,
         estimatedValue: processedCards[0].estimatedValue
@@ -330,7 +337,7 @@ router.post('/process', async (req, res) => {
       processedCards: processedCards,
       skippedCards: skippedCards,
       errors: errors,
-      message: `Processed ${processedCards.length} new cards with real pricing, skipped ${skippedCards.length} existing cards`
+      message: `Processed ${processedCards.length} new cards with REAL pricing only, skipped ${skippedCards.length} existing cards. NO MOCK DATA USED.`
     });
 
   } catch (error) {
