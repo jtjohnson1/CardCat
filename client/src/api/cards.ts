@@ -1,125 +1,191 @@
 import api from './api'
 
-interface CardData {
+interface Card {
   _id: string
-  frontImage: string
-  backImage: string
+  id: string
   manufacturer: string
   sport: string
   setName: string
   cardNumber: string
-  player: string
+  playerName: string
+  team: string
   year: number
+  condition: string
+  specialFeatures: string[]
   estimatedValue: number
-  processingDate: string
+  frontImagePath: string
+  backImagePath: string
+  processedAt: string
+  createdAt: string
+  updatedAt: string
 }
 
-// Description: Get all cards from the database
+// Description: Get all cards from database
 // Endpoint: GET /api/cards
 // Request: {}
-// Response: { cards: Array<CardData> }
+// Response: { cards: Array<Card>, totalCount: number }
 export const getCards = async () => {
-  // Mocking the response
-  return new Promise<{ cards: CardData[] }>((resolve) => {
-    setTimeout(() => {
-      const mockCards: CardData[] = [
-        {
-          _id: '1',
-          frontImage: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=200&h=280&fit=crop',
-          backImage: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=280&fit=crop',
-          manufacturer: 'Topps',
-          sport: 'Baseball',
-          setName: '1989 Topps Baseball',
-          cardNumber: '1',
-          player: 'Ken Griffey Jr.',
-          year: 1989,
-          estimatedValue: 125.50,
-          processingDate: '2024-01-15T10:30:00Z'
-        },
-        {
-          _id: '2',
-          frontImage: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=280&fit=crop',
-          backImage: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=280&fit=crop',
-          manufacturer: 'Panini',
-          sport: 'Basketball',
-          setName: '2021 Panini Prizm',
-          cardNumber: '280',
-          player: 'LaMelo Ball',
-          year: 2021,
-          estimatedValue: 89.99,
-          processingDate: '2024-01-15T11:15:00Z'
-        },
-        {
-          _id: '3',
-          frontImage: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=200&h=280&fit=crop',
-          backImage: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=280&fit=crop',
-          manufacturer: 'Fleer',
-          sport: 'Basketball',
-          setName: '1986 Fleer Basketball',
-          cardNumber: '57',
-          player: 'Michael Jordan',
-          year: 1986,
-          estimatedValue: 2500.00,
-          processingDate: '2024-01-15T09:45:00Z'
-        },
-        {
-          _id: '4',
-          frontImage: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=280&fit=crop',
-          backImage: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=280&fit=crop',
-          manufacturer: 'Upper Deck',
-          sport: 'Hockey',
-          setName: '1993 Upper Deck',
-          cardNumber: '1',
-          player: 'Wayne Gretzky',
-          year: 1993,
-          estimatedValue: 45.75,
-          processingDate: '2024-01-15T14:20:00Z'
-        },
-        {
-          _id: '5',
-          frontImage: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=200&h=280&fit=crop',
-          backImage: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=200&h=280&fit=crop',
-          manufacturer: 'Topps',
-          sport: 'Football',
-          setName: '2000 Topps Chrome',
-          cardNumber: '236',
-          player: 'Tom Brady',
-          year: 2000,
-          estimatedValue: 1850.00,
-          processingDate: '2024-01-15T16:10:00Z'
-        }
-      ]
-      resolve({ cards: mockCards })
-    }, 800)
-  })
-  // Uncomment the below lines to make an actual API call
-  // try {
-  //   const response = await api.get('/api/cards')
-  //   return response.data
-  // } catch (error) {
-  //   throw new Error(error?.response?.data?.message || error.message)
-  // }
+  console.log('=== getCards API function called ===')
+
+  try {
+    console.log('Making GET request to /api/cards...')
+    const response = await api.get('/api/cards')
+
+    console.log('API response received:')
+    console.log('- Status:', response.status)
+    console.log('- Headers:', response.headers)
+    console.log('- Data type:', typeof response.data)
+    console.log('- Data keys:', Object.keys(response.data || {}))
+    console.log('- Data:', response.data)
+
+    if (response.data && response.data.cards) {
+      console.log('✅ Cards found in response.data.cards:', response.data.cards.length)
+      console.log('Sample card:', response.data.cards[0])
+    } else if (Array.isArray(response.data)) {
+      console.log('✅ Response data is array:', response.data.length)
+      console.log('Sample card:', response.data[0])
+    } else {
+      console.log('⚠️ Unexpected response format')
+    }
+
+    return response.data
+  } catch (error: any) {
+    console.error('❌ getCards API error:')
+    console.error('- Error type:', typeof error)
+    console.error('- Error message:', error.message)
+    console.error('- Error response:', error.response)
+    console.error('- Error response data:', error.response?.data)
+    console.error('- Error response status:', error.response?.status)
+    console.error('- Full error:', error)
+
+    throw new Error(error?.response?.data?.message || error.message)
+  }
 }
 
-// Description: Delete selected cards
+// Description: Delete selected cards from database
 // Endpoint: DELETE /api/cards
 // Request: { cardIds: string[] }
-// Response: { success: boolean, deletedCount: number }
+// Response: { success: boolean, deletedCount: number, message: string }
+export const deleteSelectedCards = async (cardIds: string[]) => {
+  console.log('\n=== deleteSelectedCards API function called ===')
+  console.log('Card IDs to delete:', cardIds)
+  console.log('Number of cards to delete:', cardIds.length)
+
+  try {
+    console.log('Making DELETE request to /api/cards with data:', { cardIds })
+    const response = await api.delete('/api/cards', { data: { cardIds } })
+    
+    console.log('Delete response received:')
+    console.log('- Status:', response.status)
+    console.log('- Data:', response.data)
+    console.log('✅ deleteSelectedCards completed successfully')
+    
+    return response.data
+  } catch (error: any) {
+    console.error('❌ deleteSelectedCards API error:')
+    console.error('- Error type:', typeof error)
+    console.error('- Error message:', error.message)
+    console.error('- Error response:', error.response)
+    console.error('- Error response data:', error.response?.data)
+    console.error('- Error response status:', error.response?.status)
+    console.error('- Full error:', error)
+
+    throw new Error(error?.response?.data?.message || error.message)
+  }
+}
+
+// Description: Delete selected cards from database (alias for deleteSelectedCards)
+// Endpoint: DELETE /api/cards
+// Request: { cardIds: string[] }
+// Response: { success: boolean, deletedCount: number, message: string }
 export const deleteCards = async (cardIds: string[]) => {
-  // Mocking the response
-  return new Promise<{ success: boolean, deletedCount: number }>((resolve) => {
-    setTimeout(() => {
-      resolve({
-        success: true,
-        deletedCount: cardIds.length
-      })
-    }, 500)
-  })
-  // Uncomment the below lines to make an actual API call
-  // try {
-  //   const response = await api.delete('/api/cards', { data: { cardIds } })
-  //   return response.data
-  // } catch (error) {
-  //   throw new Error(error?.response?.data?.message || error.message)
-  // }
+  console.log('\n=== deleteCards API function called ===')
+  console.log('Card IDs to delete:', cardIds)
+  console.log('Number of cards to delete:', cardIds.length)
+
+  try {
+    console.log('Making DELETE request to /api/cards with data:', { cardIds })
+    const response = await api.delete('/api/cards', { data: { cardIds } })
+    
+    console.log('Delete response received:')
+    console.log('- Status:', response.status)
+    console.log('- Data:', response.data)
+    console.log('✅ deleteCards completed successfully')
+    
+    return response.data
+  } catch (error: any) {
+    console.error('❌ deleteCards API error:')
+    console.error('- Error type:', typeof error)
+    console.error('- Error message:', error.message)
+    console.error('- Error response:', error.response)
+    console.error('- Error response data:', error.response?.data)
+    console.error('- Error response status:', error.response?.status)
+    console.error('- Full error:', error)
+
+    throw new Error(error?.response?.data?.message || error.message)
+  }
+}
+
+// Description: Delete a single card from database
+// Endpoint: DELETE /api/cards/:id
+// Request: {}
+// Response: { success: boolean, message: string }
+export const deleteCard = async (cardId: string) => {
+  console.log('\n=== deleteCard API function called ===')
+  console.log('Card ID to delete:', cardId)
+  console.log('Card ID type:', typeof cardId)
+  console.log('Card ID length:', cardId?.length)
+
+  try {
+    console.log('Making DELETE request to /api/cards/' + cardId)
+    const response = await api.delete(`/api/cards/${cardId}`)
+    
+    console.log('Delete response received:')
+    console.log('- Status:', response.status)
+    console.log('- Data:', response.data)
+    console.log('✅ deleteCard completed successfully')
+    
+    return response.data
+  } catch (error: any) {
+    console.error('❌ deleteCard API error:')
+    console.error('- Error type:', typeof error)
+    console.error('- Error message:', error.message)
+    console.error('- Error response:', error.response)
+    console.error('- Error response data:', error.response?.data)
+    console.error('- Error response status:', error.response?.status)
+    console.error('- Full error:', error)
+
+    throw new Error(error?.response?.data?.message || error.message)
+  }
+}
+
+// Description: Get a single card by ID
+// Endpoint: GET /api/cards/:id
+// Request: {}
+// Response: Card
+export const getCard = async (cardId: string) => {
+  console.log('\n=== getCard API function called ===')
+  console.log('Card ID to fetch:', cardId)
+
+  try {
+    console.log('Making GET request to /api/cards/' + cardId)
+    const response = await api.get(`/api/cards/${cardId}`)
+    
+    console.log('Get card response received:')
+    console.log('- Status:', response.status)
+    console.log('- Data:', response.data)
+    console.log('✅ getCard completed successfully')
+    
+    return response.data
+  } catch (error: any) {
+    console.error('❌ getCard API error:')
+    console.error('- Error type:', typeof error)
+    console.error('- Error message:', error.message)
+    console.error('- Error response:', error.response)
+    console.error('- Error response data:', error.response?.data)
+    console.error('- Error response status:', error.response?.status)
+    console.error('- Full error:', error)
+
+    throw new Error(error?.response?.data?.message || error.message)
+  }
 }

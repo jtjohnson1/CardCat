@@ -8,36 +8,48 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../ui/alert-dialog"
-import { AlertTriangle } from "lucide-react"
 
 interface DeleteConfirmDialogProps {
-  open: boolean
+  isOpen: boolean
   onClose: () => void
   onConfirm: () => void
-  count: number
+  itemCount: number
 }
 
-export function DeleteConfirmDialog({ open, onClose, onConfirm, count }: DeleteConfirmDialogProps) {
+export function DeleteConfirmDialog({ isOpen, onClose, onConfirm, itemCount }: DeleteConfirmDialogProps) {
+  console.log('\n=== DELETE CONFIRM DIALOG RENDER ===')
+  console.log('isOpen:', isOpen)
+  console.log('itemCount:', itemCount)
+  console.log('onClose type:', typeof onClose)
+  console.log('onConfirm type:', typeof onConfirm)
+
   return (
-    <AlertDialog open={open} onOpenChange={onClose}>
-      <AlertDialogContent className="bg-white dark:bg-gray-900">
+    <AlertDialog open={isOpen} onOpenChange={onClose}>
+      <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            Confirm Deletion
-          </AlertDialogTitle>
+          <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete {count} selected card{count !== 1 ? 's' : ''}? 
-            This action cannot be undone and will permanently remove the card{count !== 1 ? 's' : ''} from your collection.
+            Are you sure you want to delete {itemCount} {itemCount === 1 ? 'card' : 'cards'}? 
+            This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onClose}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-700 text-white"
+          <AlertDialogCancel 
+            onClick={() => {
+              console.log('🔴 DELETE DIALOG CANCEL CLICKED')
+              onClose()
+            }}
           >
-            Delete {count} Card{count !== 1 ? 's' : ''}
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={() => {
+              console.log('🔴 DELETE DIALOG CONFIRM CLICKED')
+              onConfirm()
+            }}
+            className="bg-red-600 hover:bg-red-700"
+          >
+            Delete {itemCount} {itemCount === 1 ? 'Card' : 'Cards'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
