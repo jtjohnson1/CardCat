@@ -29,22 +29,17 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
   }
 
   const getImageUrl = (imagePath: string) => {
-    // Use relative URL to go through Vite proxy instead of absolute localhost URL
-    // This avoids CORS issues when frontend is on different host/port
     const encodedPath = encodeURIComponent(imagePath)
     const url = `/api/images/${encodedPath}`
-    console.log(`Constructed image URL: ${url} for path: ${imagePath}`)
     return url
   }
-
-  console.log(`FileGrid rendering with ${files.length} files:`, files)
 
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, index) => (
           <Card key={index} className="p-4">
-            <Skeleton className="h-32 w-full mb-2" />
+            <Skeleton className="w-full aspect-[5/7] mb-2" />
             <Skeleton className="h-4 w-3/4 mb-1" />
             <Skeleton className="h-4 w-1/2" />
           </Card>
@@ -68,11 +63,8 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {files.map((file) => {
-        console.log(`Rendering file card:`, file)
         const frontUrl = getImageUrl(file.frontImage)
         const backUrl = getImageUrl(file.backImage)
-        console.log(`Front URL: ${frontUrl}`)
-        console.log(`Back URL: ${backUrl}`)
 
         return (
           <Card
@@ -98,38 +90,42 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
                 </Badge>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="text-center">
                     <p className="text-xs text-gray-500 mb-1">Front</p>
                     {imageErrors.has(`${file.id}-front`) ? (
-                      <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                      <div className="w-full aspect-[5/7] bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
                         <AlertCircle className="w-6 h-6 text-gray-400" />
                       </div>
                     ) : (
-                      <img
-                        src={frontUrl}
-                        alt={`${file.filename} front`}
-                        className="w-full h-20 object-cover rounded border"
-                        onError={() => handleImageError(`${file.id}-front`, file.frontImage)}
-                        onLoad={() => console.log(`Front image loaded successfully: ${file.frontImage}`)}
-                      />
+                      <div className="w-full aspect-[5/7] bg-gray-100 rounded border overflow-hidden">
+                        <img
+                          src={frontUrl}
+                          alt={`${file.filename} front`}
+                          className="w-full h-full object-contain"
+                          style={{ aspectRatio: '5/7' }}
+                          onError={() => handleImageError(`${file.id}-front`, file.frontImage)}
+                        />
+                      </div>
                     )}
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-gray-500 mb-1">Back</p>
                     {imageErrors.has(`${file.id}-back`) ? (
-                      <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                      <div className="w-full aspect-[5/7] bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
                         <AlertCircle className="w-6 h-6 text-gray-400" />
                       </div>
                     ) : (
-                      <img
-                        src={backUrl}
-                        alt={`${file.filename} back`}
-                        className="w-full h-20 object-cover rounded border"
-                        onError={() => handleImageError(`${file.id}-back`, file.backImage)}
-                        onLoad={() => console.log(`Back image loaded successfully: ${file.backImage}`)}
-                      />
+                      <div className="w-full aspect-[5/7] bg-gray-100 rounded border overflow-hidden">
+                        <img
+                          src={backUrl}
+                          alt={`${file.filename} back`}
+                          className="w-full h-full object-contain"
+                          style={{ aspectRatio: '5/7' }}
+                          onError={() => handleImageError(`${file.id}-back`, file.backImage)}
+                        />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -139,7 +135,7 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
                     {file.filename}
                   </p>
                   <p className="text-xs text-gray-500">
-                    ID: {file.id}
+                    Standard Card (2.5" × 3.5")
                   </p>
                 </div>
               </div>

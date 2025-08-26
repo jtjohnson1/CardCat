@@ -67,15 +67,6 @@ export function CardTable({
   const [sortField, setSortField] = useState<SortField>('createdAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
 
-  console.log('\n=== CARD TABLE RENDER ===')
-  console.log('Cards received:', cards.length)
-  console.log('Selected cards received:', selectedCards.length)
-  console.log('Selected cards array:', selectedCards)
-  console.log('onCardSelect function type:', typeof onCardSelect)
-  console.log('onSelectAll function type:', typeof onSelectAll)
-  console.log('onDeleteSelected function type:', typeof onDeleteSelected)
-  console.log('onDeleteCard function type:', typeof onDeleteCard)
-
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
@@ -108,54 +99,15 @@ export function CardTable({
   }
 
   const handleDeleteClick = (card: CardData) => {
-    console.log('\n=== DELETE BUTTON CLICKED IN TABLE ===')
-    console.log('🔴 Individual card delete button clicked!')
-    console.log('Card to delete:', {
-      _id: card._id,
-      id: card.id,
-      playerName: card.playerName,
-      manufacturer: card.manufacturer
-    })
-    console.log('onDeleteCard function type:', typeof onDeleteCard)
-    console.log('onDeleteCard function:', onDeleteCard)
-
-    try {
-      console.log('Calling onDeleteCard with card._id:', card._id)
-      onDeleteCard(card._id)
-      console.log('✅ onDeleteCard called successfully')
-    } catch (error) {
-      console.error('❌ Error calling onDeleteCard:', error)
-    }
+    onDeleteCard(card._id)
   }
 
   const handleCheckboxChange = (cardId: string, checked: boolean) => {
-    console.log('\n=== CHECKBOX CHANGE IN TABLE ===')
-    console.log('🔵 Card checkbox clicked!')
-    console.log('Card ID:', cardId)
-    console.log('Checked:', checked)
-    console.log('onCardSelect function type:', typeof onCardSelect)
-
-    try {
-      console.log('Calling onCardSelect...')
-      onCardSelect(cardId, checked)
-      console.log('✅ onCardSelect called successfully')
-    } catch (error) {
-      console.error('❌ Error calling onCardSelect:', error)
-    }
+    onCardSelect(cardId, checked)
   }
 
   const handleSelectAllChange = () => {
-    console.log('\n=== SELECT ALL CHANGE IN TABLE ===')
-    console.log('🔵 Select all checkbox clicked!')
-    console.log('onSelectAll function type:', typeof onSelectAll)
-
-    try {
-      console.log('Calling onSelectAll...')
-      onSelectAll()
-      console.log('✅ onSelectAll called successfully')
-    } catch (error) {
-      console.error('❌ Error calling onSelectAll:', error)
-    }
+    onSelectAll()
   }
 
   const allSelected = cards.length > 0 && selectedCards.length === cards.length
@@ -174,10 +126,6 @@ export function CardTable({
     )
   }
 
-  console.log('=== RENDERING TABLE WITH CARDS ===')
-  console.log('Total cards to render:', sortedCards.length)
-  console.log('All selected state:', allSelected)
-
   return (
     <Card>
       <CardContent className="p-0">
@@ -188,15 +136,10 @@ export function CardTable({
                 <TableHead className="w-12">
                   <Checkbox
                     checked={allSelected}
-                    onCheckedChange={(checked) => {
-                      console.log('\n=== SELECT ALL CHECKBOX CLICKED ===')
-                      console.log('🔵 Select all checkbox onCheckedChange fired!')
-                      console.log('Checked value:', checked)
-                      handleSelectAllChange()
-                    }}
+                    onCheckedChange={handleSelectAllChange}
                   />
                 </TableHead>
-                <TableHead className="w-32">Images</TableHead>
+                <TableHead className="w-40">Images</TableHead>
                 <TableHead>
                   <Button
                     variant="ghost"
@@ -282,44 +225,42 @@ export function CardTable({
             </TableHeader>
             <TableBody>
               {sortedCards.map((card, index) => {
-                console.log(`Rendering card ${index + 1}/${sortedCards.length}: ${card._id} (${card.playerName})`)
                 const isSelected = selectedCards.includes(card._id)
-                console.log(`Card ${card._id} is selected: ${isSelected}`)
 
                 return (
                   <TableRow key={card._id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <TableCell>
                       <Checkbox
                         checked={isSelected}
-                        onCheckedChange={(checked) => {
-                          console.log(`\n=== INDIVIDUAL CHECKBOX CLICKED ===`)
-                          console.log(`🔵 Checkbox for card ${card._id} clicked!`)
-                          console.log(`Checked value:`, checked)
-                          console.log(`Card details:`, { _id: card._id, playerName: card.playerName })
-                          handleCheckboxChange(card._id, checked as boolean)
-                        }}
+                        onCheckedChange={(checked) => handleCheckboxChange(card._id, checked as boolean)}
                       />
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        <img
-                          src={getImageUrl(card, 'front')}
-                          alt={`${card.playerName} front`}
-                          className="w-12 h-16 object-cover rounded border"
-                          onError={(e) => {
-                            console.error('Failed to load front image:', getImageUrl(card, 'front'))
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEMyMiAyMCAyNCAyMiAyNCAyNFYyOEMyNCAzMCAyMiAzMiAyMCAzMkgxNkMxNCAzMiAxMiAzMCAxMiAyOFYyNEMxMiAyMiAxNCAyMCAxNiAyMEgyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
-                          }}
-                        />
-                        <img
-                          src={getImageUrl(card, 'back')}
-                          alt={`${card.playerName} back`}
-                          className="w-12 h-16 object-cover rounded border"
-                          onError={(e) => {
-                            console.error('Failed to load back image:', getImageUrl(card, 'back'))
-                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEMyMiAyMCAyNCAyMiAyNCAyNFYyOEMyNCAzMCAyMiAzMiAyMCAzMkgxNkMxNCAzMiAxMiAzMCAxMiAyOFYyNEMxMiAyMiAxNCAyMCAxNiAyMEgyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
-                          }}
-                        />
+                      <div className="flex gap-2">
+                        {/* Front Image - Standard trading card aspect ratio 2.5" x 3.5" (5:7) */}
+                        <div className="w-10 h-14 bg-gray-100 rounded border overflow-hidden">
+                          <img
+                            src={getImageUrl(card, 'front')}
+                            alt={`${card.playerName} front`}
+                            className="w-full h-full object-contain"
+                            style={{ aspectRatio: '5/7' }}
+                            onError={(e) => {
+                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNTYiIHZpZXdCb3g9IjAgMCA0MCA1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjU2IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyOEMyMiAyOCAyNCAzMCAyNCAzMlYzNkMyNCAzOCAyMiA0MCAyMCA0MEgxNkMxNCA0MCAxMiAzOCAxMiAzNlYzMkMxMiAzMCAxNCAyOCAxNiAyOEgyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
+                            }}
+                          />
+                        </div>
+                        {/* Back Image - Standard trading card aspect ratio 2.5" x 3.5" (5:7) */}
+                        <div className="w-10 h-14 bg-gray-100 rounded border overflow-hidden">
+                          <img
+                            src={getImageUrl(card, 'back')}
+                            alt={`${card.playerName} back`}
+                            className="w-full h-full object-contain"
+                            style={{ aspectRatio: '5/7' }}
+                            onError={(e) => {
+                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNTYiIHZpZXdCb3g9IjAgMCA0MCA1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjU2IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyOEMyMiAyOCAyNCAzMCAyNCAzMlYzNkMyNCAzOCAyMiA0MCAyMCA0MEgxNkMxNCA0MCAxMiAzOCAxMiAzNlYzMkMxMiAzMCAxNCAyOCAxNiAyOEgyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
+                            }}
+                          />
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="font-medium">{card.manufacturer}</TableCell>
@@ -343,10 +284,7 @@ export function CardTable({
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            console.log('View details button clicked for card:', card._id)
-                            onCardDetail(card)
-                          }}
+                          onClick={() => onCardDetail(card)}
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />

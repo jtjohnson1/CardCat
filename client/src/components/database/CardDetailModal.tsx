@@ -114,7 +114,7 @@ export function CardDetailModal({ card, isOpen, onClose }: CardDetailModalProps)
             {card.playerName} - {card.year} {card.manufacturer}
           </DialogTitle>
           <DialogDescription>
-            {card.setName} #{card.cardNumber}
+            {card.setName} #{card.cardNumber} • Standard Trading Card (2.5" × 3.5")
           </DialogDescription>
         </DialogHeader>
 
@@ -178,6 +178,10 @@ export function CardDetailModal({ card, isOpen, onClose }: CardDetailModalProps)
                       ${card.estimatedValue.toFixed(2)}
                     </span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="font-medium">Dimensions:</span>
+                    <span>2.5" × 3.5" (Standard)</span>
+                  </div>
                   <div>
                     <span className="font-medium">Special Features:</span>
                     <div className="flex flex-wrap gap-1 mt-1">
@@ -220,14 +224,15 @@ export function CardDetailModal({ card, isOpen, onClose }: CardDetailModalProps)
             </div>
 
             <div className="flex justify-center">
-              <div className="max-w-md">
+              <div className="w-80 bg-gray-100 rounded-lg border shadow-lg overflow-hidden">
                 <img
                   src={getImageUrl(activeImage)}
                   alt={`${card.playerName} ${activeImage}`}
-                  className="w-full h-auto rounded-lg border shadow-lg"
+                  className="w-full h-full object-contain"
+                  style={{ aspectRatio: '5/7' }}
                   onError={(e) => {
                     console.error(`Failed to load ${activeImage} image:`, getImageUrl(activeImage))
-                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDMwMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iNDAwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNTAgMjAwQzE3MCAyMDAgMTkwIDIyMCAxOTAgMjQwVjI2MEMxOTAgMjgwIDE3MCAzMDAgMTUwIDMwMEgxMzBDMTEwIDMwMCA5MCAyODAgOTAgMjYwVjI0MEM5MCAyMjAgMTEwIDIwMCAxMzAgMjAwSDE1MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
+                    e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjQ0OCIgdmlld0JveD0iMCAwIDMyMCA0NDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iNDQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0xNjAgMjI0QzE4MCAyMjQgMjAwIDI0NCAyMDAgMjY0VjI4NEMyMDAgMzA0IDE4MCAzMjQgMTYwIDMyNEgxNDBDMTIwIDMyNCAxMDAgMzA0IDEwMCAyODRWMjY0QzEwMCAyNDQgMTIwIDIyNCAxNDAgMjI0SDE2MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
                   }}
                 />
               </div>
