@@ -1,40 +1,19 @@
 #!/bin/bash
 
 # CardCat Setup Script
-# This script configures and launches the CardCat application
+# This script sets up the CardCat application by checking prerequisites,
+# configuring environment variables, installing dependencies, and optionally starting the application.
 
 set -e  # Exit on any error
 
 echo "=== CardCat Setup Script ==="
-echo ""
+echo
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_status() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Check if running as root (optional, but recommended for some operations)
-if [[ $EUID -eq 0 ]]; then
-    print_warning "Running as root. This is not required but acceptable."
+# Check if running as root
+if [ "$EUID" -eq 0 ]; then
+    echo "[WARNING] Running as root. This is not required but acceptable."
+else
+    echo "[INFO] Running as regular user."
 fi
 
 # Function to check if a command exists
@@ -42,136 +21,122 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Check prerequisites
-print_info "Checking prerequisites..."
+# Function to check if a service is running
+service_running() {
+    pgrep -f "$1" >/dev/null 2>&1
+}
+
+echo "[INFO] Checking prerequisites..."
 
 # Check Node.js
 if command_exists node; then
     NODE_VERSION=$(node --version)
-    print_status "Node.js is installed: $NODE_VERSION"
+    echo "[SUCCESS] Node.js is installed: $NODE_VERSION"
 else
-    print_error "Node.js is not installed. Please install Node.js 18+ and rerun this script."
+    echo "[ERROR] Node.js is not installed. Please install Node.js first."
     exit 1
 fi
 
 # Check npm
 if command_exists npm; then
     NPM_VERSION=$(npm --version)
-    print_status "npm is installed: $NPM_VERSION"
+    echo "[SUCCESS] npm is installed: $NPM_VERSION"
 else
-    print_error "npm is not installed. Please install npm and rerun this script."
+    echo "[ERROR] npm is not installed. Please install npm first."
     exit 1
 fi
 
 # Check MongoDB
-print_info "Checking MongoDB connection..."
+echo "[INFO] Checking MongoDB connection..."
 if command_exists mongosh; then
-    # Try to connect to MongoDB
     if mongosh --eval "db.adminCommand('ping')" --quiet >/dev/null 2>&1; then
-        print_status "MongoDB is accessible via mongosh"
+        echo "[SUCCESS] MongoDB is accessible via mongosh"
     else
-        print_error "MongoDB is not accessible. Please start MongoDB and rerun this script."
+        echo "[ERROR] MongoDB is not accessible. Please start MongoDB service."
         exit 1
     fi
 elif command_exists mongo; then
-    # Fallback to legacy mongo client
     if mongo --eval "db.adminCommand('ping')" --quiet >/dev/null 2>&1; then
-        print_status "MongoDB is accessible via mongo"
+        echo "[SUCCESS] MongoDB is accessible via mongo"
     else
-        print_error "MongoDB is not accessible. Please start MongoDB and rerun this script."
+        echo "[ERROR] MongoDB is not accessible. Please start MongoDB service."
         exit 1
     fi
 else
-    print_warning "MongoDB client (mongosh/mongo) not found. Assuming MongoDB is running..."
-fi
-
-# Check Ollama with multiple methods
-print_info "Checking Ollama service..."
-
-OLLAMA_RUNNING=false
-OLLAMA_URL="http://localhost:11434"
-
-# Method 1: Check if ollama command exists and list models
-if command_exists ollama; then
-    print_info "Ollama command found. Testing model availability..."
-    if ollama list >/dev/null 2>&1; then
-        print_status "Ollama CLI is working and can list models"
-        OLLAMA_RUNNING=true
-    else
-        print_warning "Ollama CLI exists but cannot list models"
-    fi
-else
-    print_warning "Ollama CLI command not found in PATH"
-fi
-
-# Method 2: Check if Ollama API is responding
-print_info "Testing Ollama API connectivity..."
-if command_exists curl; then
-    # Test API endpoint with timeout
-    if curl -s --connect-timeout 5 --max-time 10 "$OLLAMA_URL/api/tags" >/dev/null 2>&1; then
-        print_status "Ollama API is responding at $OLLAMA_URL"
-        OLLAMA_RUNNING=true
-    else
-        print_warning "Ollama API not responding at $OLLAMA_URL"
-    fi
-elif command_exists wget; then
-    # Fallback to wget
-    if wget -q --timeout=10 --tries=1 -O /dev/null "$OLLAMA_URL/api/tags" >/dev/null 2>&1; then
-        print_status "Ollama API is responding at $OLLAMA_URL"
-        OLLAMA_RUNNING=true
-    else
-        print_warning "Ollama API not responding at $OLLAMA_URL"
-    fi
-else
-    print_warning "Neither curl nor wget available for API testing"
-fi
-
-# Method 3: Check for Ollama process
-if pgrep -f "ollama" >/dev/null 2>&1; then
-    print_status "Ollama process is running"
-    OLLAMA_RUNNING=true
-else
-    print_warning "No Ollama process found"
-fi
-
-# Final Ollama validation
-if [ "$OLLAMA_RUNNING" = true ]; then
-    print_status "Ollama is running and accessible"
-
-    # Check for required model
-    print_info "Checking for required AI model..."
-    if command_exists ollama; then
-        if ollama list | grep -q "llava"; then
-            print_status "Llava model is available"
-        else
-            print_warning "Llava model not found. You may need to run: ollama pull llava"
-        fi
-    fi
-else
-    print_error "Ollama is not running or not accessible."
-    print_info "Please ensure Ollama is installed and running:"
-    print_info "  1. Install Ollama: https://ollama.ai/"
-    print_info "  2. Start Ollama service"
-    print_info "  3. Pull required model: ollama pull llava"
-    print_info "  4. Rerun this setup script"
+    echo "[ERROR] MongoDB client (mongosh or mongo) is not installed."
     exit 1
 fi
 
-# Setup environment variables
-print_info "Setting up environment variables..."
+# Check Ollama
+echo "[INFO] Checking Ollama service..."
+if command_exists ollama; then
+    echo "[INFO] Ollama command found. Testing model availability..."
+    
+    # Test if ollama can list models
+    if ollama list >/dev/null 2>&1; then
+        echo "[SUCCESS] Ollama CLI is working and can list models"
+    else
+        echo "[WARNING] Ollama CLI found but may not be properly configured"
+    fi
+    
+    # Test API connectivity
+    echo "[INFO] Testing Ollama API connectivity..."
+    if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+        echo "[SUCCESS] Ollama API is responding at http://localhost:11434"
+    else
+        echo "[WARNING] Ollama API not responding. Ollama service may not be running."
+        echo "[INFO] Attempting to start Ollama service..."
+        # Try to start ollama in background
+        ollama serve >/dev/null 2>&1 &
+        sleep 3
+        if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+            echo "[SUCCESS] Ollama service started successfully"
+        else
+            echo "[ERROR] Could not start Ollama service. Please start it manually with 'ollama serve'"
+            exit 1
+        fi
+    fi
+    
+    # Check if ollama process is running
+    if service_running "ollama"; then
+        echo "[SUCCESS] Ollama process is running"
+    else
+        echo "[WARNING] Ollama process not detected, but API is responding"
+    fi
+    
+    echo "[SUCCESS] Ollama is running and accessible"
+else
+    echo "[ERROR] Ollama is not installed. Please install Ollama first."
+    echo "[INFO] Visit https://ollama.ai for installation instructions."
+    exit 1
+fi
 
-# Server environment
-SERVER_ENV_FILE="server/.env"
-if [ ! -f "$SERVER_ENV_FILE" ]; then
-    print_info "Creating server environment file..."
-    cat > "$SERVER_ENV_FILE" << EOF
-# Port to listen on
+# Check for required AI model
+echo "[INFO] Checking for required AI model..."
+if ollama list | grep -q "llava"; then
+    echo "[SUCCESS] Llava model is available"
+else
+    echo "[INFO] Llava model not found. Attempting to pull..."
+    if ollama pull llava; then
+        echo "[SUCCESS] Llava model installed successfully"
+    else
+        echo "[ERROR] Failed to install Llava model. Please run 'ollama pull llava' manually."
+        exit 1
+    fi
+fi
+
+# Setup environment variables
+echo "[INFO] Setting up environment variables..."
+
+# Server environment file
+if [ ! -f "server/.env" ]; then
+    echo "[INFO] Creating server environment file..."
+    cat > server/.env << EOF
+# Port to listen on (example: 3000)
 PORT=3000
 
-# MongoDB database URL (using lowercase database name)
+# MongoDB database URL (example: mongodb://localhost/dbname)
 DATABASE_URL=mongodb://localhost/cardcat
-
-# JWT secrets (generate your own in production)
 JWT_SECRET=your-jwt-secret-key-here
 REFRESH_TOKEN_SECRET=your-refresh-token-secret-here
 
@@ -179,54 +144,69 @@ REFRESH_TOKEN_SECRET=your-refresh-token-secret-here
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=llava
 
-# eBay API configuration (optional - configure in app settings)
-EBAY_APP_ID=
-EBAY_CERT_ID=
-EBAY_DEV_ID=
+# eBay API configuration (optional - get from eBay Developer Program)
+# EBAY_APP_ID=your-ebay-app-id
+# EBAY_CERT_ID=your-ebay-cert-id  
+# EBAY_DEV_ID=your-ebay-dev-id
 EOF
-    print_status "Server environment file created"
+    echo "[SUCCESS] Server environment file created"
 else
-    print_info "Server environment file already exists"
+    echo "[INFO] Server environment file already exists"
 fi
 
 # Install dependencies
-print_info "Installing server dependencies..."
+echo "[INFO] Installing root dependencies..."
+if npm install; then
+    echo "[SUCCESS] Root dependencies installed"
+else
+    echo "[ERROR] Failed to install root dependencies"
+    exit 1
+fi
+
+echo "[INFO] Installing server dependencies..."
 cd server
 if npm install; then
-    print_status "Server dependencies installed"
+    echo "[SUCCESS] Server dependencies installed"
 else
-    print_error "Failed to install server dependencies"
+    echo "[ERROR] Failed to install server dependencies"
     exit 1
 fi
 cd ..
 
-print_info "Installing client dependencies..."
+echo "[INFO] Installing client dependencies..."
 cd client
 if npm install; then
-    print_status "Client dependencies installed"
+    echo "[SUCCESS] Client dependencies installed"
 else
-    print_error "Failed to install client dependencies"
+    echo "[ERROR] Failed to install client dependencies"
     exit 1
 fi
 cd ..
 
-print_status "Setup completed successfully!"
-echo ""
-print_info "CardCat is ready to run!"
-print_info ""
-print_info "The application will be available at:"
-print_info "  - Frontend: http://localhost:5173"
-print_info "  - Backend API: http://localhost:3000"
-print_info ""
+echo "[SUCCESS] Setup completed successfully!"
+echo
+echo "[INFO] CardCat is ready to run!"
+echo "[INFO]"
+echo "[INFO] The application will be available at:"
+echo "[INFO]   - Frontend: http://localhost:5173"
+echo "[INFO]   - Backend API: http://localhost:3000"
+echo "[INFO]"
 
 # Ask if user wants to start the application
 read -p "Do you want to start the application now? (y/n): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    print_info "Starting CardCat application..."
-    print_info "Starting in production mode..."
-    exec npm start
+    echo "[INFO] Starting CardCat application..."
+    
+    # Check if we're in production mode
+    if [ "$1" = "prod" ]; then
+        echo "[INFO] Starting in production mode..."
+        npm start
+    else
+        echo "[INFO] Starting in development mode..."
+        npm start
+    fi
 else
-    print_info "You can start the application later by running: npm start"
-    print_info "Make sure MongoDB and Ollama are running before starting the application."
+    echo "[INFO] Setup complete. To start the application later, run:"
+    echo "[INFO]   npm start"
 fi
