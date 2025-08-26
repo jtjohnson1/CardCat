@@ -2,8 +2,9 @@ import api from './api'
 
 interface EbaySettings {
   appId: string
-  certId: string
   devId: string
+  certId: string
+  rotatingKey: string
   configured: boolean
 }
 
@@ -31,12 +32,13 @@ export const getEbaySettings = async (): Promise<EbaySettings> => {
 
 // Description: Save eBay API configuration
 // Endpoint: POST /api/settings/ebay
-// Request: { appId: string, certId: string, devId: string }
+// Request: { appId: string, devId: string, certId: string, rotatingKey: string }
 // Response: { success: boolean, message: string, configured: boolean }
 export const saveEbaySettings = async (settings: {
   appId: string
-  certId: string
   devId: string
+  certId: string
+  rotatingKey: string
 }) => {
   try {
     console.log('Saving eBay settings to API...')

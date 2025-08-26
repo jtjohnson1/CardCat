@@ -54,8 +54,9 @@ const writeEnvFile = (envVars) => {
     // Add eBay API configuration
     envLines.push('# eBay API Configuration');
     envLines.push(`EBAY_APP_ID=${envVars.EBAY_APP_ID || ''}`);
-    envLines.push(`EBAY_CERT_ID=${envVars.EBAY_CERT_ID || ''}`);
     envLines.push(`EBAY_DEV_ID=${envVars.EBAY_DEV_ID || ''}`);
+    envLines.push(`EBAY_CERT_ID=${envVars.EBAY_CERT_ID || ''}`);
+    envLines.push(`EBAY_ROTATING_KEY=${envVars.EBAY_ROTATING_KEY || ''}`);
     envLines.push('');
 
     // Add Ollama configuration
@@ -83,15 +84,17 @@ router.get('/ebay', async (req, res) => {
 
     const ebayConfig = {
       appId: envVars.EBAY_APP_ID || '',
-      certId: envVars.EBAY_CERT_ID || '',
       devId: envVars.EBAY_DEV_ID || '',
-      configured: !!(envVars.EBAY_APP_ID && envVars.EBAY_CERT_ID && envVars.EBAY_DEV_ID)
+      certId: envVars.EBAY_CERT_ID || '',
+      rotatingKey: envVars.EBAY_ROTATING_KEY || '',
+      configured: !!(envVars.EBAY_APP_ID && envVars.EBAY_DEV_ID && envVars.EBAY_CERT_ID && envVars.EBAY_ROTATING_KEY)
     };
 
     console.log('eBay configuration loaded:', {
       appId: ebayConfig.appId ? '***configured***' : 'not set',
-      certId: ebayConfig.certId ? '***configured***' : 'not set',
       devId: ebayConfig.devId ? '***configured***' : 'not set',
+      certId: ebayConfig.certId ? '***configured***' : 'not set',
+      rotatingKey: ebayConfig.rotatingKey ? '***configured***' : 'not set',
       configured: ebayConfig.configured
     });
 
@@ -111,18 +114,19 @@ router.post('/ebay', async (req, res) => {
   try {
     console.log('\n=== SAVE EBAY SETTINGS REQUEST ===');
     
-    const { appId, certId, devId } = req.body;
+    const { appId, devId, certId, rotatingKey } = req.body;
 
     console.log('Received eBay settings:', {
       appId: appId ? '***provided***' : 'not provided',
+      devId: devId ? '***provided***' : 'not provided',
       certId: certId ? '***provided***' : 'not provided',
-      devId: devId ? '***provided***' : 'not provided'
+      rotatingKey: rotatingKey ? '***provided***' : 'not provided'
     });
 
-    if (!appId || !certId || !devId) {
+    if (!appId || !devId || !certId || !rotatingKey) {
       return res.status(400).json({
         error: 'All eBay API credentials are required',
-        message: 'Please provide App ID, Certificate ID, and Developer ID'
+        message: 'Please provide App ID, Dev ID, Certificate ID, and Rotating Key'
       });
     }
 
@@ -131,16 +135,18 @@ router.post('/ebay', async (req, res) => {
 
     // Update eBay settings
     envVars.EBAY_APP_ID = appId.trim();
-    envVars.EBAY_CERT_ID = certId.trim();
     envVars.EBAY_DEV_ID = devId.trim();
+    envVars.EBAY_CERT_ID = certId.trim();
+    envVars.EBAY_ROTATING_KEY = rotatingKey.trim();
 
     // Write updated .env file
     writeEnvFile(envVars);
 
     // Update process.env for immediate use
     process.env.EBAY_APP_ID = appId.trim();
-    process.env.EBAY_CERT_ID = certId.trim();
     process.env.EBAY_DEV_ID = devId.trim();
+    process.env.EBAY_CERT_ID = certId.trim();
+    process.env.EBAY_ROTATING_KEY = rotatingKey.trim();
 
     console.log('✅ eBay settings saved successfully');
 

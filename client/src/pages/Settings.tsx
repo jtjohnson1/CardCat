@@ -6,7 +6,6 @@ import { Label } from "../components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Badge } from "../components/ui/badge"
 import { Separator } from "../components/ui/separator"
-import { Switch } from "../components/ui/switch"
 import {
   Settings as SettingsIcon,
   Globe,
@@ -15,20 +14,16 @@ import {
   Save,
   CheckCircle,
   AlertCircle,
-  RefreshCw,
-  Key,
-  Image,
-  Trash2,
-  Download,
-  Upload
+  RefreshCw
 } from "lucide-react"
 import { getEbaySettings, saveEbaySettings, getOllamaSettings, saveOllamaSettings } from "../api/settings"
 import { useToast } from "../hooks/useToast"
 
 interface EbaySettings {
   appId: string
-  certId: string
   devId: string
+  certId: string
+  rotatingKey: string
   configured: boolean
 }
 
@@ -41,20 +36,15 @@ interface OllamaSettings {
 export function Settings() {
   const [ebaySettings, setEbaySettings] = useState<EbaySettings>({
     appId: '',
-    certId: '',
     devId: '',
+    certId: '',
+    rotatingKey: '',
     configured: false
   })
   const [ollamaSettings, setOllamaSettings] = useState<OllamaSettings>({
     url: 'http://localhost:11434',
     model: 'llava',
     configured: false
-  })
-  const [processingSettings, setProcessingSettings] = useState({
-    imageQuality: "high",
-    batchSize: 10,
-    autoProcess: false,
-    saveOriginals: true
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -97,8 +87,9 @@ export function Settings() {
 
       const result = await saveEbaySettings({
         appId: ebaySettings.appId,
+        devId: ebaySettings.devId,
         certId: ebaySettings.certId,
-        devId: ebaySettings.devId
+        rotatingKey: ebaySettings.rotatingKey
       })
 
       setEbaySettings(prev => ({ ...prev, configured: result.configured }))
@@ -149,22 +140,6 @@ export function Settings() {
     } finally {
       setSaving(false)
     }
-  }
-
-  const handleSaveProcessingSettings = () => {
-    console.log('Saving processing settings:', processingSettings)
-    toast({
-      title: "Settings Saved",
-      description: "Processing preferences have been updated"
-    })
-  }
-
-  const handleDatabaseMaintenance = (action: string) => {
-    console.log('Database maintenance action:', action)
-    toast({
-      title: "Database Maintenance",
-      description: `${action} operation started`
-    })
   }
 
   if (loading) {
@@ -250,7 +225,7 @@ export function Settings() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="ebay-app-id">Application ID (App ID)</Label>
+                <Label htmlFor="ebay-app-id">App ID (Client ID)</Label>
                 <Input
                   id="ebay-app-id"
                   type="text"
@@ -259,12 +234,26 @@ export function Settings() {
                   onChange={(e) => setEbaySettings(prev => ({ ...prev, appId: e.target.value }))}
                 />
                 <p className="text-xs text-gray-500">
-                  Your eBay Application ID from the eBay Developer Program
+                  Your eBay Application ID (Client ID) from the eBay Developer Program
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="ebay-cert-id">Certificate ID (Cert ID)</Label>
+                <Label htmlFor="ebay-dev-id">Dev ID</Label>
+                <Input
+                  id="ebay-dev-id"
+                  type="text"
+                  placeholder="Enter your eBay Developer ID"
+                  value={ebaySettings.devId}
+                  onChange={(e) => setEbaySettings(prev => ({ ...prev, devId: e.target.value }))}
+                />
+                <p className="text-xs text-gray-500">
+                  Your eBay Developer ID from the eBay Developer Program
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ebay-cert-id">Cert ID</Label>
                 <Input
                   id="ebay-cert-id"
                   type="text"
@@ -278,16 +267,16 @@ export function Settings() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="ebay-dev-id">Developer ID (Dev ID)</Label>
+                <Label htmlFor="ebay-rotating-key">Rotating Key</Label>
                 <Input
-                  id="ebay-dev-id"
+                  id="ebay-rotating-key"
                   type="text"
-                  placeholder="Enter your eBay Developer ID"
-                  value={ebaySettings.devId}
-                  onChange={(e) => setEbaySettings(prev => ({ ...prev, devId: e.target.value }))}
+                  placeholder="Enter your eBay Rotating Key"
+                  value={ebaySettings.rotatingKey}
+                  onChange={(e) => setEbaySettings(prev => ({ ...prev, rotatingKey: e.target.value }))}
                 />
                 <p className="text-xs text-gray-500">
-                  Your eBay Developer ID from the eBay Developer Program
+                  Your eBay Rotating Key from the eBay Developer Program
                 </p>
               </div>
 
@@ -302,7 +291,7 @@ export function Settings() {
                 </div>
                 <Button
                   onClick={handleSaveEbaySettings}
-                  disabled={saving || !ebaySettings.appId || !ebaySettings.certId || !ebaySettings.devId}
+                  disabled={saving || !ebaySettings.appId || !ebaySettings.devId || !ebaySettings.certId || !ebaySettings.rotatingKey}
                 >
                   {saving ? (
                     <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
@@ -319,7 +308,7 @@ export function Settings() {
                   <li>1. Visit the eBay Developer Program website</li>
                   <li>2. Create a developer account or sign in</li>
                   <li>3. Create a new application</li>
-                  <li>4. Copy your App ID, Certificate ID, and Developer ID</li>
+                  <li>4. Copy your App ID, Dev ID, Certificate ID, and Rotating Key</li>
                   <li>5. Paste them into the fields above and save</li>
                 </ol>
               </div>
@@ -415,7 +404,7 @@ export function Settings() {
         </TabsContent>
 
         <TabsContent value="processing" className="space-y-4">
-          <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <SettingsIcon className="w-5 h-5" />
@@ -425,68 +414,14 @@ export function Settings() {
                 Configure image processing and recognition settings
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="imageQuality">Image Quality</Label>
-                  <select
-                    id="imageQuality"
-                    value={processingSettings.imageQuality}
-                    onChange={(e) => setProcessingSettings({...processingSettings, imageQuality: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white dark:bg-gray-800 dark:border-gray-600"
-                  >
-                    <option value="low">Low (Faster)</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High (Better Accuracy)</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="batchSize">Batch Size</Label>
-                  <Input
-                    id="batchSize"
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={processingSettings.batchSize}
-                    onChange={(e) => setProcessingSettings({...processingSettings, batchSize: parseInt(e.target.value)})}
-                    className="bg-white dark:bg-gray-800"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="autoProcess"
-                    checked={processingSettings.autoProcess}
-                    onCheckedChange={(checked) => setProcessingSettings({...processingSettings, autoProcess: checked})}
-                  />
-                  <Label htmlFor="autoProcess">Auto-process new images</Label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="saveOriginals"
-                    checked={processingSettings.saveOriginals}
-                    onCheckedChange={(checked) => setProcessingSettings({...processingSettings, saveOriginals: checked})}
-                  />
-                  <Label htmlFor="saveOriginals">Save original image files</Label>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center gap-2">
-                <Button onClick={handleSaveProcessingSettings} className="bg-gradient-to-r from-blue-500 to-purple-600">
-                  Save Preferences
-                </Button>
-              </div>
+            <CardContent>
+              <p className="text-gray-500">Processing settings coming soon...</p>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="database" className="space-y-4">
-          <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="w-5 h-5" />
@@ -496,79 +431,8 @@ export function Settings() {
                 Maintain and manage your card database
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Backup & Restore</h3>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => handleDatabaseMaintenance('Backup')}
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Export Database
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => handleDatabaseMaintenance('Restore')}
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Import Database
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Maintenance</h3>
-                  <div className="space-y-2">
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start"
-                      onClick={() => handleDatabaseMaintenance('Optimize')}
-                    >
-                      <Database className="w-4 h-4 mr-2" />
-                      Optimize Database
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      className="w-full justify-start"
-                      onClick={() => handleDatabaseMaintenance('Clear')}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Clear All Data
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Database Statistics</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-500">Total Cards</p>
-                    <p className="font-semibold">1,247</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Database Size</p>
-                    <p className="font-semibold">45.2 MB</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Last Backup</p>
-                    <p className="font-semibold">2 days ago</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Status</p>
-                    <Badge variant="default" className="text-xs">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Healthy
-                    </Badge>
-                  </div>
-                </div>
-              </div>
+            <CardContent>
+              <p className="text-gray-500">Database management tools coming soon...</p>
             </CardContent>
           </Card>
         </TabsContent>
