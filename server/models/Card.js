@@ -49,12 +49,19 @@ const cardSchema = new mongoose.Schema({
     default: 0
   },
   
-  // File paths
+  // File paths (store both file system paths and URL paths)
   frontImagePath: {
     type: String,
     required: true
   },
   backImagePath: {
+    type: String
+  },
+  // Add URL versions for frontend consumption
+  frontImageUrl: {
+    type: String
+  },
+  backImageUrl: {
     type: String
   },
   
@@ -82,6 +89,15 @@ const cardSchema = new mongoose.Schema({
 // Update the updatedAt field before saving
 cardSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
+  
+  // Generate URL versions of image paths for frontend consumption
+  if (this.frontImagePath && !this.frontImageUrl) {
+    this.frontImageUrl = `/api/images/${encodeURIComponent(this.frontImagePath)}`;
+  }
+  if (this.backImagePath && !this.backImageUrl) {
+    this.backImageUrl = `/api/images/${encodeURIComponent(this.backImagePath)}`;
+  }
+  
   next();
 });
 
