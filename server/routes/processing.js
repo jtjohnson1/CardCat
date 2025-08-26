@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs').promises;
 const path = require('path');
+const ollamaService = require('../services/ollamaService');
 
 // Helper function to check if file is an image
 const isImageFile = (filename) => {
@@ -206,6 +207,7 @@ router.post('/process', async (req, res) => {
   try {
     const { fileIds } = req.body;
 
+    console.log('\n=== PROCESSING CARDS WITH OLLAMA ===');
     console.log('Processing cards request:', { fileIds });
 
     if (!fileIds || !Array.isArray(fileIds)) {
@@ -214,55 +216,92 @@ router.post('/process', async (req, res) => {
       });
     }
 
-    console.log(`Starting to process ${fileIds.length} card files...`);
+    console.log(`Starting to process ${fileIds.length} card files with Ollama...`);
 
     const processedCards = [];
     const errors = [];
 
-    // Process each card (simulate for now)
+    // Process each card with Ollama
     for (let i = 0; i < fileIds.length; i++) {
       const fileId = fileIds[i];
-      console.log(`Processing card ${i + 1}/${fileIds.length}: ${fileId}`);
+      console.log(`\n--- Processing card ${i + 1}/${fileIds.length}: ${fileId} ---`);
 
       try {
-        // Simulate processing time
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // For now, we need to reconstruct the file paths from the fileId
+        // This is a limitation of the current design - we should store the full paths
+        // For demonstration, let's assume the files are in /opt/cardimg
+        const frontImagePath = `/opt/cardimg/${fileId}-front.jpg`;
+        const backImagePath = `/opt/cardimg/${fileId}-back.jpg`;
 
-        // TODO: Replace with actual Ollama processing
-        // For now, create mock card data
-        const mockCardData = {
-          id: fileId,
-          manufacturer: 'Topps',
-          sport: 'Baseball',
-          setName: '2023 Series 1',
-          cardNumber: Math.floor(Math.random() * 500) + 1,
-          playerName: 'Sample Player',
-          year: 2023,
-          estimatedValue: Math.floor(Math.random() * 100) + 10
-        };
+        console.log(`Front image path: ${frontImagePath}`);
+        console.log(`Back image path: ${backImagePath}`);
 
-        processedCards.push(mockCardData);
-        console.log(`Successfully processed card: ${fileId}`);
+        // Check if files exist
+        const frontExists = require('fs').existsSync(frontImagePath);
+        const backExists = require('fs').existsSync(backImagePath);
+
+        console.log(`Front image exists: ${frontExists}`);
+        console.log(`Back image exists: ${backExists}`);
+
+        if (!frontExists) {
+          throw new Error(`Front image not found: ${frontImagePath}`);
+        }
+
+        // Analyze front image with Ollama
+        console.log(`Analyzing front image with Ollama...`);
+        const frontAnalysis = await ollamaService.analyzeCardImage(frontImagePath, false);
+
+        // Analyze back image if it exists
+        let backAnalysis = null;
+        if (backExists) {
+          console.log(`Analyzing back image with Ollama...`);
+          backAnalysis = await ollamaService.analyzeCardImage(backImagePath, true);
+        }
+
+        // Parse the analysis into structured card data
+        console.log(`Parsing Ollama analysis results...`);
+        const cardData = ollamaService.parseCardAnalysis(
+          frontAnalysis.analysis,
+          backAnalysis?.analysis
+        );
+
+        // Add metadata
+        cardData.id = fileId;
+        cardData.processedAt = new Date().toISOString();
+        cardData.frontImagePath = frontImagePath;
+        cardData.backImagePath = backImagePath;
+
+        processedCards.push(cardData);
+        console.log(`✅ Successfully processed card with Ollama: ${fileId}`);
 
       } catch (error) {
-        console.error(`Error processing card ${fileId}:`, error.message);
+        console.error(`❌ Error processing card ${fileId} with Ollama:`, error.message);
         errors.push(`Failed to process ${fileId}: ${error.message}`);
       }
     }
 
-    console.log(`Processing completed. Success: ${processedCards.length}, Errors: ${errors.length}`);
+    console.log(`\n=== OLLAMA PROCESSING SUMMARY ===`);
+    console.log(`✅ Processing completed. Success: ${processedCards.length}, Errors: ${errors.length}`);
+    
+    if (processedCards.length > 0) {
+      console.log(`Sample processed card:`, processedCards[0]);
+    }
+    
+    if (errors.length > 0) {
+      console.log(`Errors:`, errors);
+    }
 
     res.json({
-      success: true,
+      success: processedCards.length > 0,
       processedCount: processedCards.length,
       processedCards: processedCards,
       errors: errors
     });
 
   } catch (error) {
-    console.error('Error processing cards:', error);
+    console.error('❌ Error in Ollama processing:', error);
     res.status(500).json({
-      error: 'Failed to process cards',
+      error: 'Failed to process cards with Ollama',
       message: error.message
     });
   }
