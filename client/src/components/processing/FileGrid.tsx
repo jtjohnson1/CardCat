@@ -29,10 +29,10 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
   }
 
   const getImageUrl = (imagePath: string) => {
-    // imagePath is now a raw file system path like "/opt/cardimg/lot1-00001-front.jpg"
-    // Encode it once for the URL
+    // Use relative URL to go through Vite proxy instead of absolute localhost URL
+    // This avoids CORS issues when frontend is on different host/port
     const encodedPath = encodeURIComponent(imagePath)
-    const url = `http://localhost:3000/api/images/${encodedPath}`
+    const url = `/api/images/${encodedPath}`
     console.log(`Constructed image URL: ${url} for path: ${imagePath}`)
     return url
   }
@@ -73,7 +73,7 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
         const backUrl = getImageUrl(file.backImage)
         console.log(`Front URL: ${frontUrl}`)
         console.log(`Back URL: ${backUrl}`)
-        
+
         return (
           <Card
             key={file.id}
