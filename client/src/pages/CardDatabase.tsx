@@ -12,27 +12,36 @@ import {
   Search,
   Filter,
   Trash2,
-  Eye
+  RefreshCw,
+  Download,
+  Upload
 } from "lucide-react"
 import { getCards, deleteCards } from "../api/cards"
 import { useToast } from "../hooks/useToast"
 
 interface CardData {
   _id: string
-  frontImage: string
-  backImage: string
+  id: string
   manufacturer: string
   sport: string
   setName: string
   cardNumber: string
-  player: string
+  playerName: string
+  team: string
   year: number
+  condition: string
+  specialFeatures: string[]
   estimatedValue: number
-  processingDate: string
-  selected?: boolean
+  frontImagePath: string
+  backImagePath: string
+  frontImageUrl?: string
+  backImageUrl?: string
+  processedAt: string
+  createdAt: string
+  updatedAt: string
 }
 
-interface FilterOptions {
+interface Filters {
   manufacturer: string
   sport: string
   yearRange: [number, number]
@@ -40,114 +49,165 @@ interface FilterOptions {
 }
 
 export function CardDatabase() {
+  console.log('=== CardDatabase component rendering ===')
+  
   const [cards, setCards] = useState<CardData[]>([])
   const [filteredCards, setFilteredCards] = useState<CardData[]>([])
-  const [loading, setLoading] = useState(true)
+  const [selectedCards, setSelectedCards] = useState<string[]>([])
   const [searchQuery, setSearchQuery] = useState("")
-  const [filters, setFilters] = useState<FilterOptions>({
+  const [filters, setFilters] = useState<Filters>({
     manufacturer: "",
     sport: "",
     yearRange: [1950, 2024],
     valueRange: [0, 1000]
   })
   const [selectedCard, setSelectedCard] = useState<CardData | null>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [sortField, setSortField] = useState<keyof CardData>("processingDate")
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
+  const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
   useEffect(() => {
-    const fetchCards = async () => {
-      try {
-        console.log('Fetching cards from database...')
-        const data = await getCards()
-        setCards(data.cards)
-        setFilteredCards(data.cards)
-      } catch (error) {
-        console.error('Failed to fetch cards:', error)
-        toast({
-          title: "Error",
-          description: "Failed to load card database",
-          variant: "destructive"
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCards()
-  }, [toast])
+    console.log('=== CardDatabase useEffect triggered ===')
+    loadCards()
+  }, [])
 
   useEffect(() => {
-    let filtered = [...cards]
+    console.log('=== Filtering cards ===')
+    console.log('Total cards before filtering:', cards.length)
+    console.log('Search query:', searchQuery)
+    console.log('Filters:', filters)
+    
+    filterCards()
+  }, [cards, searchQuery, filters])
 
-    // Apply search filter
-    if (searchQuery) {
+  const loadCards = async () => {
+    console.log('=== loadCards function called ===')
+    setLoading(true)
+    
+    try {
+      console.log('Making API call to getCards...')
+      const response = await getCards()
+      console.log('API response received:', response)
+      console.log('Response type:', typeof response)
+      console.log('Response keys:', Object.keys(response || {}))
+      
+      if (response && response.cards) {
+        console.log('Cards array found in response:', response.cards.length, 'cards')
+        console.log('First card sample:', response.cards[0])
+        setCards(response.cards)
+      } else if (Array.isArray(response)) {
+        console.log('Response is array:', response.length, 'cards')
+        console.log('First card sample:', response[0])
+        setCards(response)
+      } else {
+        console.error('Unexpected response format:', response)
+        setCards([])
+      }
+      
+      toast({
+        title: "Cards Loaded",
+        description: `Loaded ${response?.cards?.length || response?.length || 0} cards from database`
+      })
+    } catch (error) {
+      console.error('Error loading cards:', error)
+      console.error('Error type:', typeof error)
+      console.error('Error message:', error instanceof Error ? error.message : String(error))
+      
+      toast({
+        title: "Error",
+        description: `Failed to load cards: ${error instanceof Error ? error.message : String(error)}`,
+        variant: "destructive"
+      })
+      setCards([])
+    } finally {
+      console.log('loadCards completed, setting loading to false')
+      setLoading(false)
+    }
+  }
+
+  const filterCards = () => {
+    console.log('=== filterCards function called ===')
+    
+    let filtered = [...cards]
+    console.log('Starting with', filtered.length, 'cards')
+
+    // Apply search query
+    if (searchQuery.trim()) {
+      console.log('Applying search query:', searchQuery)
+      const query = searchQuery.toLowerCase()
       filtered = filtered.filter(card =>
-        card.player.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.setName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.manufacturer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        card.sport.toLowerCase().includes(searchQuery.toLowerCase())
+        card.playerName?.toLowerCase().includes(query) ||
+        card.manufacturer?.toLowerCase().includes(query) ||
+        card.setName?.toLowerCase().includes(query) ||
+        card.team?.toLowerCase().includes(query) ||
+        card.cardNumber?.toLowerCase().includes(query)
       )
+      console.log('After search filter:', filtered.length, 'cards')
     }
 
     // Apply filters
     if (filters.manufacturer) {
-      filtered = filtered.filter(card => card.manufacturer === filters.manufacturer)
+      console.log('Applying manufacturer filter:', filters.manufacturer)
+      filtered = filtered.filter(card => 
+        card.manufacturer?.toLowerCase() === filters.manufacturer.toLowerCase()
+      )
+      console.log('After manufacturer filter:', filtered.length, 'cards')
     }
+
     if (filters.sport) {
-      filtered = filtered.filter(card => card.sport === filters.sport)
+      console.log('Applying sport filter:', filters.sport)
+      filtered = filtered.filter(card => 
+        card.sport?.toLowerCase() === filters.sport.toLowerCase()
+      )
+      console.log('After sport filter:', filtered.length, 'cards')
     }
-    filtered = filtered.filter(card =>
+
+    // Year range filter
+    filtered = filtered.filter(card => 
       card.year >= filters.yearRange[0] && card.year <= filters.yearRange[1]
     )
-    filtered = filtered.filter(card =>
+    console.log('After year filter:', filtered.length, 'cards')
+
+    // Value range filter
+    filtered = filtered.filter(card => 
       card.estimatedValue >= filters.valueRange[0] && card.estimatedValue <= filters.valueRange[1]
     )
+    console.log('After value filter:', filtered.length, 'cards')
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      const aValue = a[sortField]
-      const bValue = b[sortField]
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue)
-      }
-      
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue
-      }
-      
-      return 0
-    })
-
+    console.log('Final filtered cards:', filtered.length)
     setFilteredCards(filtered)
-  }, [cards, searchQuery, filters, sortField, sortDirection])
+  }
 
-  const handleSort = (field: keyof CardData) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+  const handleCardSelect = (cardId: string, selected: boolean) => {
+    console.log('Card selection changed:', cardId, selected)
+    if (selected) {
+      setSelectedCards(prev => [...prev, cardId])
     } else {
-      setSortField(field)
-      setSortDirection('asc')
+      setSelectedCards(prev => prev.filter(id => id !== cardId))
     }
   }
 
   const handleSelectAll = () => {
-    const allSelected = filteredCards.every(card => card.selected)
-    setFilteredCards(filteredCards.map(card => ({ ...card, selected: !allSelected })))
+    console.log('Select all toggled')
+    const allSelected = selectedCards.length === filteredCards.length
+    if (allSelected) {
+      console.log('Deselecting all cards')
+      setSelectedCards([])
+    } else {
+      console.log('Selecting all filtered cards:', filteredCards.length)
+      setSelectedCards(filteredCards.map(card => card._id))
+    }
   }
 
-  const handleCardSelect = (cardId: string, selected: boolean) => {
-    setFilteredCards(filteredCards.map(card =>
-      card._id === cardId ? { ...card, selected } : card
-    ))
+  const handleCardDetail = (card: CardData) => {
+    console.log('Opening card detail for:', card._id, card.playerName)
+    setSelectedCard(card)
+    setShowDetailModal(true)
   }
 
-  const handleDeleteSelected = async () => {
-    const selectedCards = filteredCards.filter(card => card.selected)
+  const handleDeleteSelected = () => {
+    console.log('Delete selected clicked, selected cards:', selectedCards.length)
     if (selectedCards.length === 0) {
       toast({
         title: "No Cards Selected",
@@ -156,32 +216,39 @@ export function CardDatabase() {
       })
       return
     }
+    setShowDeleteDialog(true)
+  }
 
+  const confirmDelete = async () => {
+    console.log('Confirming delete for cards:', selectedCards)
     try {
-      console.log('Deleting selected cards:', selectedCards.length)
-      await deleteCards(selectedCards.map(card => card._id))
-      
-      // Remove deleted cards from state
-      const deletedIds = selectedCards.map(card => card._id)
-      setCards(cards.filter(card => !deletedIds.includes(card._id)))
+      const response = await deleteCards(selectedCards)
+      console.log('Delete response:', response)
       
       toast({
         title: "Cards Deleted",
-        description: `Successfully deleted ${selectedCards.length} cards`
+        description: `Successfully deleted ${response.deletedCount} cards`
       })
+      
+      // Reload cards
+      await loadCards()
+      setSelectedCards([])
+      setShowDeleteDialog(false)
     } catch (error) {
-      console.error('Failed to delete cards:', error)
+      console.error('Error deleting cards:', error)
       toast({
-        title: "Delete Failed",
-        description: "Failed to delete selected cards",
+        title: "Error",
+        description: `Failed to delete cards: ${error instanceof Error ? error.message : String(error)}`,
         variant: "destructive"
       })
     }
-    
-    setShowDeleteDialog(false)
   }
 
-  const selectedCount = filteredCards.filter(card => card.selected).length
+  console.log('=== CardDatabase render state ===')
+  console.log('Loading:', loading)
+  console.log('Total cards:', cards.length)
+  console.log('Filtered cards:', filteredCards.length)
+  console.log('Selected cards:', selectedCards.length)
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-500">
@@ -191,29 +258,80 @@ export function CardDatabase() {
             Card Database
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Browse and manage your processed card collection
+            Manage and browse your card collection
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-sm">
-            {filteredCards.length} cards
-          </Badge>
-          {selectedCount > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setShowDeleteDialog(true)}
-              className="flex items-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Delete Selected ({selectedCount})
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            onClick={loadCards}
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Cards</CardTitle>
+            <Database className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{cards.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {filteredCards.length} filtered
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Selected</CardTitle>
+            <Badge variant="secondary">{selectedCards.length}</Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{selectedCards.length}</div>
+            <p className="text-xs text-muted-foreground">
+              cards selected
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${filteredCards.reduce((sum, card) => sum + card.estimatedValue, 0).toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              estimated value
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ${filteredCards.length > 0 ? (filteredCards.reduce((sum, card) => sum + card.estimatedValue, 0) / filteredCards.length).toFixed(2) : '0.00'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              per card
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Search and Filters */}
-      <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="w-5 h-5" />
@@ -227,18 +345,23 @@ export function CardDatabase() {
           <div className="flex gap-4">
             <div className="flex-1">
               <Input
-                placeholder="Search by player, set, manufacturer, or sport..."
+                placeholder="Search by player, manufacturer, set, team, or card number..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-white dark:bg-gray-800"
               />
             </div>
-            <Button variant="outline" className="flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              Advanced Filters
-            </Button>
+            {selectedCards.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={handleDeleteSelected}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Selected ({selectedCards.length})
+              </Button>
+            )}
           </div>
-          
+
           <CardFilters
             filters={filters}
             onFiltersChange={setFilters}
@@ -248,56 +371,40 @@ export function CardDatabase() {
       </Card>
 
       {/* Cards Table */}
-      <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="w-5 h-5" />
-                Card Collection
-              </CardTitle>
-              <CardDescription>
-                {filteredCards.length} cards found
-              </CardDescription>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSelectAll}
-              className="flex items-center gap-2"
-            >
-              {filteredCards.every(card => card.selected) ? 'Deselect All' : 'Select All'}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <CardTable
-            cards={filteredCards}
-            loading={loading}
-            sortField={sortField}
-            sortDirection={sortDirection}
-            onSort={handleSort}
-            onCardSelect={handleCardSelect}
-            onCardView={(card) => setSelectedCard(card)}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Card Detail Modal */}
-      {selectedCard && (
-        <CardDetailModal
-          card={selectedCard}
-          open={!!selectedCard}
-          onClose={() => setSelectedCard(null)}
+      {loading ? (
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <RefreshCw className="w-8 h-8 animate-spin mr-4" />
+            <span>Loading cards...</span>
+          </CardContent>
+        </Card>
+      ) : (
+        <CardTable
+          cards={filteredCards}
+          selectedCards={selectedCards}
+          onCardSelect={handleCardSelect}
+          onSelectAll={handleSelectAll}
+          onCardDetail={handleCardDetail}
+          onDeleteSelected={handleDeleteSelected}
         />
       )}
 
+      {/* Card Detail Modal */}
+      <CardDetailModal
+        card={selectedCard}
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false)
+          setSelectedCard(null)
+        }}
+      />
+
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
-        open={showDeleteDialog}
+        isOpen={showDeleteDialog}
         onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleDeleteSelected}
-        count={selectedCount}
+        onConfirm={confirmDelete}
+        itemCount={selectedCards.length}
       />
     </div>
   )
