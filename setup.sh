@@ -137,7 +137,7 @@ fi
 # Final Ollama validation
 if [ "$OLLAMA_RUNNING" = true ]; then
     print_status "Ollama is running and accessible"
-    
+
     # Check for required model
     print_info "Checking for required AI model..."
     if command_exists ollama; then
@@ -168,8 +168,8 @@ if [ ! -f "$SERVER_ENV_FILE" ]; then
 # Port to listen on
 PORT=3000
 
-# MongoDB database URL
-DATABASE_URL=mongodb://localhost/CardCat
+# MongoDB database URL (using lowercase database name)
+DATABASE_URL=mongodb://localhost/cardcat
 
 # JWT secrets (generate your own in production)
 JWT_SECRET=your-jwt-secret-key-here
