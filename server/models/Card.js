@@ -86,7 +86,6 @@ cardSchema.pre('save', function(next) {
 });
 
 // Create indexes for better query performance
-cardSchema.index({ id: 1 });
 cardSchema.index({ playerName: 1 });
 cardSchema.index({ manufacturer: 1 });
 cardSchema.index({ sport: 1 });

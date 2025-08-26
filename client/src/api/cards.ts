@@ -46,6 +46,19 @@ export const deleteSelectedCards = async (cardIds: string[]) => {
   }
 }
 
+// Description: Delete selected cards from database (alias for deleteSelectedCards)
+// Endpoint: DELETE /api/cards
+// Request: { cardIds: string[] }
+// Response: { success: boolean, deletedCount: number, message: string }
+export const deleteCards = async (cardIds: string[]) => {
+  try {
+    const response = await api.delete('/api/cards', { data: { cardIds } })
+    return response.data
+  } catch (error: any) {
+    throw new Error(error?.response?.data?.message || error.message)
+  }
+}
+
 // Description: Delete a single card from database
 // Endpoint: DELETE /api/cards/:id
 // Request: {}
