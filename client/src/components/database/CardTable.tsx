@@ -91,11 +91,30 @@ export function CardTable({
   }
 
   const getImageUrl = (card: CardData, type: 'front' | 'back') => {
-    // Use the URL fields if available, otherwise construct from path
     if (type === 'front') {
       return card.frontImageUrl || `/api/images/${encodeURIComponent(card.frontImagePath)}`
     } else {
       return card.backImageUrl || `/api/images/${encodeURIComponent(card.backImagePath)}`
+    }
+  }
+
+  const handleDeleteClick = (card: CardData) => {
+    console.log('\n=== DELETE BUTTON CLICKED ===')
+    console.log('Card to delete:', {
+      _id: card._id,
+      id: card.id,
+      playerName: card.playerName,
+      manufacturer: card.manufacturer
+    })
+    console.log('onDeleteCard function type:', typeof onDeleteCard)
+    console.log('onDeleteCard function:', onDeleteCard)
+    
+    try {
+      console.log('Calling onDeleteCard with card._id:', card._id)
+      onDeleteCard(card._id)
+      console.log('✅ onDeleteCard called successfully')
+    } catch (error) {
+      console.error('❌ Error calling onDeleteCard:', error)
     }
   }
 
@@ -264,7 +283,10 @@ export function CardTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onCardDetail(card)}
+                        onClick={() => {
+                          console.log('View details button clicked for card:', card._id)
+                          onCardDetail(card)
+                        }}
                         title="View Details"
                       >
                         <Eye className="w-4 h-4" />
@@ -272,7 +294,7 @@ export function CardTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onDeleteCard(card._id)}
+                        onClick={() => handleDeleteClick(card)}
                         title="Delete Card"
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       >

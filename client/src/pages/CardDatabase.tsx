@@ -221,30 +221,78 @@ export function CardDatabase() {
   }
 
   const handleDeleteCard = (cardId: string) => {
-    console.log('Delete single card clicked:', cardId)
+    console.log('\n=== HANDLE DELETE CARD CALLED ===')
+    console.log('Card ID to delete:', cardId)
+    console.log('Card ID type:', typeof cardId)
+    console.log('Card ID length:', cardId?.length)
+    
+    // Find the card in our current cards array
+    const cardToDeleteObj = cards.find(card => card._id === cardId)
+    console.log('Found card object:', cardToDeleteObj)
+    
+    if (!cardToDeleteObj) {
+      console.error('❌ Card not found in current cards array')
+      toast({
+        title: "Error",
+        description: "Card not found",
+        variant: "destructive"
+      })
+      return
+    }
+
+    console.log('Setting cardToDelete and showing delete dialog...')
     setCardToDelete(cardId)
     setSelectedCards([cardId])
     setShowDeleteDialog(true)
+    console.log('✅ Delete dialog should now be visible')
   }
 
   const confirmDelete = async () => {
-    console.log('Confirming delete for cards:', selectedCards)
+    console.log('\n=== CONFIRM DELETE CALLED ===')
+    console.log('Cards to delete:', selectedCards)
+    console.log('Single card to delete:', cardToDelete)
+    
     try {
-      const response = await deleteCards(selectedCards)
-      console.log('Delete response:', response)
+      let response
+      
+      if (cardToDelete) {
+        // Single card delete
+        console.log('Calling deleteCard API for single card:', cardToDelete)
+        response = await deleteCard(cardToDelete)
+        console.log('Single delete response:', response)
+      } else if (selectedCards.length > 0) {
+        // Multiple cards delete
+        console.log('Calling deleteCards API for multiple cards:', selectedCards)
+        response = await deleteCards(selectedCards)
+        console.log('Multiple delete response:', response)
+      } else {
+        console.error('❌ No cards to delete')
+        return
+      }
+
+      console.log('✅ Delete operation completed successfully')
       
       toast({
         title: "Cards Deleted",
-        description: `Successfully deleted ${response.deletedCount} cards`
+        description: `Successfully deleted ${response.deletedCount || 1} cards`
       })
-      
+
       // Reload cards
+      console.log('Reloading cards after delete...')
       await loadCards()
+      
+      // Reset state
       setSelectedCards([])
       setCardToDelete(null)
       setShowDeleteDialog(false)
+      
+      console.log('✅ Delete operation and cleanup completed')
+      
     } catch (error) {
-      console.error('Error deleting cards:', error)
+      console.error('❌ Error during delete operation:', error)
+      console.error('Error type:', typeof error)
+      console.error('Error message:', error instanceof Error ? error.message : String(error))
+      
       toast({
         title: "Error",
         description: `Failed to delete cards: ${error instanceof Error ? error.message : String(error)}`,
@@ -258,6 +306,8 @@ export function CardDatabase() {
   console.log('Total cards:', cards.length)
   console.log('Filtered cards:', filteredCards.length)
   console.log('Selected cards:', selectedCards.length)
+  console.log('Show delete dialog:', showDeleteDialog)
+  console.log('Card to delete:', cardToDelete)
 
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-500">
@@ -413,6 +463,7 @@ export function CardDatabase() {
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
         onClose={() => {
+          console.log('Delete dialog closed')
           setShowDeleteDialog(false)
           setCardToDelete(null)
           setSelectedCards([])
