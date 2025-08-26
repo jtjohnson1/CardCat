@@ -49,6 +49,7 @@ interface CardTableProps {
   onSelectAll: () => void
   onCardDetail: (card: CardData) => void
   onDeleteSelected: () => void
+  onDeleteCard: (cardId: string) => void
 }
 
 type SortField = keyof CardData
@@ -60,7 +61,8 @@ export function CardTable({
   onCardSelect,
   onSelectAll,
   onCardDetail,
-  onDeleteSelected
+  onDeleteSelected,
+  onDeleteCard
 }: CardTableProps) {
   const [sortField, setSortField] = useState<SortField>('createdAt')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -263,13 +265,16 @@ export function CardTable({
                         variant="ghost"
                         size="sm"
                         onClick={() => onCardDetail(card)}
+                        title="View Details"
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onCardSelect(card._id, !selectedCards.includes(card._id))}
+                        onClick={() => onDeleteCard(card._id)}
+                        title="Delete Card"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

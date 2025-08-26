@@ -16,7 +16,7 @@ import {
   Download,
   Upload
 } from "lucide-react"
-import { getCards, deleteCards } from "../api/cards"
+import { getCards, deleteCards, deleteCard } from "../api/cards"
 import { useToast } from "../hooks/useToast"
 
 interface CardData {
@@ -64,6 +64,7 @@ export function CardDatabase() {
   const [selectedCard, setSelectedCard] = useState<CardData | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [cardToDelete, setCardToDelete] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
@@ -219,6 +220,13 @@ export function CardDatabase() {
     setShowDeleteDialog(true)
   }
 
+  const handleDeleteCard = (cardId: string) => {
+    console.log('Delete single card clicked:', cardId)
+    setCardToDelete(cardId)
+    setSelectedCards([cardId])
+    setShowDeleteDialog(true)
+  }
+
   const confirmDelete = async () => {
     console.log('Confirming delete for cards:', selectedCards)
     try {
@@ -233,6 +241,7 @@ export function CardDatabase() {
       // Reload cards
       await loadCards()
       setSelectedCards([])
+      setCardToDelete(null)
       setShowDeleteDialog(false)
     } catch (error) {
       console.error('Error deleting cards:', error)
@@ -386,6 +395,7 @@ export function CardDatabase() {
           onSelectAll={handleSelectAll}
           onCardDetail={handleCardDetail}
           onDeleteSelected={handleDeleteSelected}
+          onDeleteCard={handleDeleteCard}
         />
       )}
 
@@ -402,7 +412,11 @@ export function CardDatabase() {
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog
         isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
+        onClose={() => {
+          setShowDeleteDialog(false)
+          setCardToDelete(null)
+          setSelectedCards([])
+        }}
         onConfirm={confirmDelete}
         itemCount={selectedCards.length}
       />
