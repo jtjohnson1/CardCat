@@ -6,6 +6,7 @@ class OllamaService {
   constructor() {
     this.baseUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
     this.model = process.env.OLLAMA_MODEL || 'llava';
+    console.log(`🔧 OllamaService initialized with URL: ${this.baseUrl}, Model: ${this.model}`);
   }
 
   /**
@@ -39,7 +40,7 @@ class OllamaService {
       const base64Image = this.imageToBase64(imagePath);
 
       // Create prompt based on front or back image
-      const prompt = isBack 
+      const prompt = isBack
         ? `Analyze this trading card back image. Extract any visible information including:
 - Card number or ID
 - Copyright year
@@ -93,7 +94,7 @@ Return the information in a structured format.`;
 
     } catch (error) {
       console.error(`❌ Ollama analysis failed: ${error.message}`);
-      
+
       if (error.code === 'ECONNREFUSED') {
         throw new Error('Ollama service is not running or not accessible');
       } else if (error.response?.status === 404) {
@@ -113,14 +114,55 @@ Return the information in a structured format.`;
    */
   async checkOllamaHealth() {
     try {
-      console.log(`Checking Ollama health at: ${this.baseUrl}`);
+      console.log(`🔍 Checking Ollama health at: ${this.baseUrl}`);
+      console.log(`🔍 Attempting to connect to Ollama service...`);
+      
       const response = await axios.get(`${this.baseUrl}/api/tags`, {
         timeout: 5000
       });
-      console.log(`✅ Ollama is healthy, available models: ${response.data.models?.length || 0}`);
+      
+      console.log(`✅ Ollama is healthy and accessible!`);
+      console.log(`✅ Available models: ${response.data.models?.length || 0}`);
+      
+      if (response.data.models && response.data.models.length > 0) {
+        console.log(`📋 Model list:`, response.data.models.map(m => m.name));
+        
+        // Check if our required model is available
+        const hasRequiredModel = response.data.models.some(m => m.name.includes(this.model));
+        if (hasRequiredModel) {
+          console.log(`✅ Required model '${this.model}' is available`);
+        } else {
+          console.log(`⚠️  Required model '${this.model}' not found. Available models:`, response.data.models.map(m => m.name));
+        }
+      } else {
+        console.log(`⚠️  No models found in Ollama. You may need to pull a model first.`);
+      }
+      
       return true;
     } catch (error) {
       console.error(`❌ Ollama health check failed: ${error.message}`);
+      console.error(`❌ Error details:`, {
+        code: error.code,
+        errno: error.errno,
+        syscall: error.syscall,
+        address: error.address,
+        port: error.port
+      });
+      
+      // Provide specific troubleshooting guidance
+      if (error.code === 'ECONNREFUSED') {
+        console.error(`🚨 TROUBLESHOOTING: Ollama service is not running!`);
+        console.error(`🔧 To fix this issue:`);
+        console.error(`   1. Check if Ollama is installed: ollama --version`);
+        console.error(`   2. Start Ollama service: ollama serve`);
+        console.error(`   3. Or run Ollama in Docker: docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama`);
+        console.error(`   4. Pull required model: ollama pull ${this.model}`);
+        console.error(`   5. Verify service: curl http://localhost:11434/api/tags`);
+      } else if (error.code === 'ENOTFOUND') {
+        console.error(`🚨 TROUBLESHOOTING: Cannot resolve Ollama hostname`);
+        console.error(`🔧 Check your OLLAMA_URL environment variable: ${this.baseUrl}`);
+      }
+      
       throw new Error(`Ollama service is not accessible: ${error.message}`);
     }
   }
@@ -168,7 +210,7 @@ Return the information in a structured format.`;
    */
   extractField(text, keywords) {
     if (!text) return null;
-    
+
     const lines = text.toLowerCase().split('\n');
     for (const keyword of keywords) {
       for (const line of lines) {
@@ -198,16 +240,16 @@ Return the information in a structured format.`;
    */
   extractSpecialFeatures(text) {
     if (!text) return [];
-    
+
     const features = [];
     const lowerText = text.toLowerCase();
-    
+
     if (lowerText.includes('rookie')) features.push('Rookie Card');
     if (lowerText.includes('autograph') || lowerText.includes('auto')) features.push('Autograph');
     if (lowerText.includes('jersey') || lowerText.includes('relic')) features.push('Game-Used');
     if (lowerText.includes('serial') || lowerText.includes('numbered')) features.push('Serial Numbered');
     if (lowerText.includes('parallel')) features.push('Parallel');
-    
+
     return features;
   }
 }
