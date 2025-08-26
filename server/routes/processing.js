@@ -3,6 +3,7 @@ const router = express.Router();
 const fs = require('fs').promises;
 const path = require('path');
 const ollamaService = require('../services/ollamaService');
+const Card = require('../models/Card');
 
 // Helper function to check if file is an image
 const isImageFile = (filename) => {
@@ -207,7 +208,7 @@ router.post('/process', async (req, res) => {
   try {
     const { fileIds } = req.body;
 
-    console.log('\n=== PROCESSING CARDS WITH OLLAMA ===');
+    console.log('\n=== PROCESSING CARDS WITH OLLAMA AND MONGODB ===');
     console.log('Processing cards request:', { fileIds });
 
     if (!fileIds || !Array.isArray(fileIds)) {
@@ -267,9 +268,15 @@ router.post('/process', async (req, res) => {
 
         // Add metadata
         cardData.id = fileId;
-        cardData.processedAt = new Date().toISOString();
+        cardData.processedAt = new Date();
         cardData.frontImagePath = frontImagePath;
         cardData.backImagePath = backImagePath;
+
+        // Save to MongoDB
+        console.log(`Saving card to MongoDB...`);
+        const card = new Card(cardData);
+        await card.save();
+        console.log(`✅ Card saved to MongoDB with ID: ${card._id}`);
 
         processedCards.push(cardData);
         console.log(`✅ Successfully processed card with Ollama: ${fileId}`);
@@ -282,11 +289,11 @@ router.post('/process', async (req, res) => {
 
     console.log(`\n=== OLLAMA PROCESSING SUMMARY ===`);
     console.log(`✅ Processing completed. Success: ${processedCards.length}, Errors: ${errors.length}`);
-    
+
     if (processedCards.length > 0) {
       console.log(`Sample processed card:`, processedCards[0]);
     }
-    
+
     if (errors.length > 0) {
       console.log(`Errors:`, errors);
     }
