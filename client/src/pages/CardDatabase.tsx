@@ -276,6 +276,21 @@ export function CardDatabase() {
     }
   }
 
+  // Helper functions to safely calculate values
+  const calculateTotalValue = () => {
+    if (!filteredCards || filteredCards.length === 0) return 0
+    return filteredCards.reduce((sum, card) => {
+      const value = typeof card.estimatedValue === 'number' ? card.estimatedValue : 0
+      return sum + value
+    }, 0)
+  }
+
+  const calculateAverageValue = () => {
+    if (!filteredCards || filteredCards.length === 0) return 0
+    const total = calculateTotalValue()
+    return total / filteredCards.length
+  }
+
   // Log render state
   console.log('\n=== RENDER STATE ===')
   console.log('selectedCards:', selectedCards)
@@ -340,7 +355,7 @@ export function CardDatabase() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${filteredCards.reduce((sum, card) => sum + card.estimatedValue, 0).toFixed(2)}
+              ${calculateTotalValue().toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
               estimated value
@@ -354,7 +369,7 @@ export function CardDatabase() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${filteredCards.length > 0 ? (filteredCards.reduce((sum, card) => sum + card.estimatedValue, 0) / filteredCards.length).toFixed(2) : '0.00'}
+              ${calculateAverageValue().toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">
               per card
@@ -393,9 +408,9 @@ export function CardDatabase() {
                   console.log('Event target:', e.target)
                   console.log('Current target:', e.currentTarget)
                   console.log('Calling handleDeleteSelected...')
-                  
+
                   handleDeleteSelected()
-                  
+
                   console.log('handleDeleteSelected call completed')
                 }}
                 onMouseDown={(e) => {
