@@ -1,24 +1,31 @@
 {
-  "name": "CardCat",
+  "name": "cardcat",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Card Cataloging Application",
+  "main": "server/server.js",
   "scripts": {
-    "postinstall": "concurrently -n \"client,server\" \"npm run client-install\" \"npm run server-install\"",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "client": "cd client && npm run dev",
-    "client-install": "cd client && npm install",
-    "server": "cd server && npm run dev",
-    "server-install": "cd server && npm install",
-    "start": "concurrently -n \"client,server\" \"npm run client\" \"npm run server\"",
-    "debug": "concurrently -n \"client,server\" \"npm run client\" \"cross-env NODE_OPTIONS=--inspect-brk=9229 npm run server\""
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
+    "client": "cd client && npm start",
+    "client:dev": "cd client && npm run dev",
+    "server": "cd server && npm start",
+    "server:dev": "cd server && npm run dev",
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "build": "cd client && npm run build"
   },
+  "keywords": [
+    "cards",
+    "cataloging",
+    "collection",
+    "ai",
+    "image-recognition"
+  ],
   "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "concurrently": "^9.1.0"
-  },
+  "license": "MIT",
   "devDependencies": {
-    "cross-env": "^7.0.3"
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
