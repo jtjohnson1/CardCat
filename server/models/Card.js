@@ -46,7 +46,7 @@ const cardSchema = new mongoose.Schema({
   }],
   estimatedValue: {
     type: Number,
-    default: 0
+    default: 0  // 🚨 DEFAULT IS 0 - NO MOCK DATA
   },
   
   // File paths (store both file system paths and URL paths)
@@ -88,6 +88,17 @@ const cardSchema = new mongoose.Schema({
 
 // Update the updatedAt field before saving
 cardSchema.pre('save', function(next) {
+  console.log(`\n🚨 CARD BEING SAVED TO DATABASE:`);
+  console.log(`- Player: ${this.playerName}`);
+  console.log(`- Manufacturer: ${this.manufacturer}`);
+  console.log(`- 🚨 ESTIMATED VALUE: $${this.estimatedValue}`);
+  
+  if (this.estimatedValue > 0) {
+    console.log(`🚨 WARNING: Card being saved with non-zero estimated value! This might be mock data!`);
+  } else {
+    console.log(`✅ Card being saved with $0.00 estimated value - no mock data`);
+  }
+
   this.updatedAt = Date.now();
   
   // Generate URL versions of image paths for frontend consumption

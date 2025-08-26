@@ -12,6 +12,17 @@ router.get('/stats', async (req, res) => {
     const totalCards = await Card.countDocuments();
     console.log('Total cards in database:', totalCards);
 
+    // 🚨 CHECK FOR MOCK DATA IN DASHBOARD
+    const cardsWithMockPricing = await Card.find({ estimatedValue: { $gt: 0 } });
+    console.log(`🚨 CARDS WITH MOCK PRICING IN DASHBOARD: ${cardsWithMockPricing.length}`);
+    
+    if (cardsWithMockPricing.length > 0) {
+      console.log('🚨 MOCK DATA DETECTED IN DASHBOARD STATS!');
+      cardsWithMockPricing.slice(0, 3).forEach((card, index) => {
+        console.log(`Mock Card ${index + 1}: ${card.playerName} - $${card.estimatedValue}`);
+      });
+    }
+
     // Get cards by manufacturer
     const cardsByManufacturer = await Card.aggregate([
       {
@@ -53,11 +64,15 @@ router.get('/stats', async (req, res) => {
       }
     ]);
     const totalValue = totalValueResult.length > 0 ? totalValueResult[0].totalValue : 0;
-    console.log('Total estimated value:', totalValue);
+    console.log('🚨 TOTAL ESTIMATED VALUE (SHOULD BE $0):', totalValue);
+
+    if (totalValue > 0) {
+      console.log('🚨 MOCK PRICING DATA DETECTED IN TOTAL VALUE CALCULATION!');
+    }
 
     // Get average card value
     const averageValue = totalCards > 0 ? totalValue / totalCards : 0;
-    console.log('Average card value:', averageValue);
+    console.log('🚨 AVERAGE CARD VALUE (SHOULD BE $0):', averageValue);
 
     // Get recently added cards (last 7 days)
     const sevenDaysAgo = new Date();
@@ -67,6 +82,15 @@ router.get('/stats', async (req, res) => {
       createdAt: { $gte: sevenDaysAgo }
     }).sort({ createdAt: -1 }).limit(10);
     console.log('Recent cards (last 7 days):', recentCards.length);
+
+    // 🚨 CHECK RECENT CARDS FOR MOCK DATA
+    const recentCardsWithPricing = recentCards.filter(card => card.estimatedValue > 0);
+    if (recentCardsWithPricing.length > 0) {
+      console.log(`🚨 RECENT CARDS WITH MOCK PRICING: ${recentCardsWithPricing.length}`);
+      recentCardsWithPricing.forEach((card, index) => {
+        console.log(`Recent Mock Card ${index + 1}: ${card.playerName} - $${card.estimatedValue}`);
+      });
+    }
 
     // Get cards processed today
     const today = new Date();
@@ -85,6 +109,15 @@ router.get('/stats', async (req, res) => {
       .limit(5)
       .select('playerName manufacturer year estimatedValue frontImageUrl');
     console.log('Most valuable cards:', mostValuableCards.length);
+
+    // 🚨 CHECK MOST VALUABLE CARDS FOR MOCK DATA
+    const valuableCardsWithPricing = mostValuableCards.filter(card => card.estimatedValue > 0);
+    if (valuableCardsWithPricing.length > 0) {
+      console.log(`🚨 MOST VALUABLE CARDS WITH MOCK PRICING: ${valuableCardsWithPricing.length}`);
+      valuableCardsWithPricing.forEach((card, index) => {
+        console.log(`Valuable Mock Card ${index + 1}: ${card.playerName} - $${card.estimatedValue}`);
+      });
+    }
 
     const response = {
       totalCards,
@@ -115,6 +148,12 @@ router.get('/stats', async (req, res) => {
       recentCardsCount: response.recentCards.length,
       mostValuableCardsCount: response.mostValuableCards.length
     });
+
+    console.log('🚨 FINAL CHECK - RESPONSE CONTAINS MOCK DATA:');
+    console.log(`- Total Value: $${response.totalValue} (should be $0)`);
+    console.log(`- Average Value: $${response.averageValue} (should be $0)`);
+    console.log(`- Recent cards with pricing: ${response.recentCards.filter(c => c.estimatedValue > 0).length}`);
+    console.log(`- Most valuable cards with pricing: ${response.mostValuableCards.filter(c => c.estimatedValue > 0).length}`);
 
     res.json(response);
 

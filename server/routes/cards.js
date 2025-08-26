@@ -16,14 +16,39 @@ router.get('/', async (req, res) => {
     console.log(`✅ Database query completed. Found ${cards.length} cards`);
 
     if (cards.length > 0) {
-      console.log('Sample card from database:');
-      console.log('- MongoDB _id:', cards[0]._id);
-      console.log('- Custom id:', cards[0].id);
-      console.log('- Player:', cards[0].playerName);
-      console.log('- Manufacturer:', cards[0].manufacturer);
-      console.log('- Front Image Path:', cards[0].frontImagePath);
-      console.log('- Front Image URL:', cards[0].frontImageUrl);
-      console.log('- Created At:', cards[0].createdAt);
+      console.log('🔍 ANALYZING CARDS FOR MOCK DATA:');
+      cards.forEach((card, index) => {
+        if (index < 5) { // Log first 5 cards
+          console.log(`Card ${index + 1}:`);
+          console.log('- MongoDB _id:', card._id);
+          console.log('- Custom id:', card.id);
+          console.log('- Player:', card.playerName);
+          console.log('- Manufacturer:', card.manufacturer);
+          console.log('- 🚨 ESTIMATED VALUE:', card.estimatedValue);
+          console.log('- Front Image Path:', card.frontImagePath);
+          console.log('- Created At:', card.createdAt);
+          console.log('- Analysis Raw:', card.analysisRaw ? 'Present' : 'Missing');
+          
+          // Check for mock data indicators
+          if (card.estimatedValue > 0) {
+            console.log('🚨 MOCK DATA DETECTED: Card has non-zero estimated value!');
+          }
+          if (card.playerName === 'Unknown Player' || card.manufacturer === 'Unknown') {
+            console.log('🚨 POSSIBLE MOCK DATA: Default values detected');
+          }
+        }
+      });
+
+      // Count cards with pricing data
+      const cardsWithPricing = cards.filter(card => card.estimatedValue > 0);
+      console.log(`🚨 TOTAL CARDS WITH PRICING DATA: ${cardsWithPricing.length} out of ${cards.length}`);
+      
+      if (cardsWithPricing.length > 0) {
+        console.log('🚨 MOCK DATA STILL EXISTS IN DATABASE!');
+        cardsWithPricing.slice(0, 3).forEach((card, index) => {
+          console.log(`Mock Card ${index + 1}: ${card.playerName} - $${card.estimatedValue}`);
+        });
+      }
     } else {
       console.log('⚠️ No cards found in database');
     }
@@ -72,6 +97,12 @@ router.get('/:id', async (req, res) => {
     }
 
     console.log(`Found card: ${card.playerName} (MongoDB _id: ${card._id}, custom id: ${card.id})`);
+    console.log(`🚨 CARD ESTIMATED VALUE: $${card.estimatedValue}`);
+    
+    if (card.estimatedValue > 0) {
+      console.log('🚨 WARNING: This card has mock pricing data!');
+    }
+
     res.json(card);
 
   } catch (error) {
@@ -92,7 +123,7 @@ router.delete('/:id', async (req, res) => {
 
     // Try to delete by MongoDB _id first, then by custom id field
     let result = await Card.deleteOne({ _id: req.params.id });
-    
+
     if (result.deletedCount === 0) {
       console.log('No card found with MongoDB _id, trying custom id field...');
       result = await Card.deleteOne({ id: req.params.id });
@@ -136,7 +167,7 @@ router.delete('/', async (req, res) => {
 
     // Try to delete by MongoDB _id first, then by custom id field
     let result = await Card.deleteMany({ _id: { $in: cardIds } });
-    
+
     if (result.deletedCount === 0) {
       console.log('No cards found with MongoDB _ids, trying custom id field...');
       result = await Card.deleteMany({ id: { $in: cardIds } });

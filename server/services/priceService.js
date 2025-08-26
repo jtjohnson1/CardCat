@@ -15,16 +15,28 @@ class PriceService {
    * Get price comparisons from multiple sources
    */
   async getPriceComparisons(cardData) {
-    console.log('\n=== PRICE SERVICE: Getting price comparisons (REAL DATA ONLY) ===');
+    console.log('\n=== PRICE SERVICE: Getting price comparisons (ABSOLUTELY NO MOCK DATA) ===');
     console.log('Card data:', cardData);
 
     const priceComparisons = [];
 
     try {
-      // Get eBay prices ONLY if properly configured
-      if (this.ebayConfig.appId && this.ebayConfig.devId && this.ebayConfig.certId && this.ebayConfig.rotatingKey) {
+      // 🚨 STRICT CHECK: Only use eBay if ALL credentials are present
+      const ebayConfigured = this.ebayConfig.appId && 
+                            this.ebayConfig.devId && 
+                            this.ebayConfig.certId && 
+                            this.ebayConfig.rotatingKey;
+
+      console.log('🔍 eBay Configuration Check:');
+      console.log(`- App ID: ${this.ebayConfig.appId ? 'CONFIGURED' : 'MISSING'}`);
+      console.log(`- Dev ID: ${this.ebayConfig.devId ? 'CONFIGURED' : 'MISSING'}`);
+      console.log(`- Cert ID: ${this.ebayConfig.certId ? 'CONFIGURED' : 'MISSING'}`);
+      console.log(`- Rotating Key: ${this.ebayConfig.rotatingKey ? 'CONFIGURED' : 'MISSING'}`);
+      console.log(`- Overall eBay Status: ${ebayConfigured ? 'READY' : 'NOT CONFIGURED'}`);
+
+      if (ebayConfigured) {
         try {
-          console.log('✅ eBay API is configured - attempting real price lookup...');
+          console.log('✅ eBay API is fully configured - attempting REAL price lookup...');
           const ebayPrices = await this.getEbayPrices(cardData);
           priceComparisons.push(...ebayPrices);
           console.log(`✅ Retrieved ${ebayPrices.length} REAL eBay prices`);
@@ -32,42 +44,47 @@ class PriceService {
           console.error('❌ eBay price lookup failed:', error.message);
         }
       } else {
-        console.log('⚠️ eBay API not configured - skipping eBay price lookup');
-        console.log('eBay config status:', {
-          appId: !!this.ebayConfig.appId,
-          devId: !!this.ebayConfig.devId,
-          certId: !!this.ebayConfig.certId,
-          rotatingKey: !!this.ebayConfig.rotatingKey
-        });
+        console.log('🚫 eBay API not fully configured - NO PRICE LOOKUP PERFORMED');
       }
 
-      // Get TCGPlayer prices ONLY if properly configured (currently not implemented)
-      console.log('⚠️ TCGPlayer API not implemented - skipping TCGPlayer price lookup');
-      // NO MOCK DATA - just skip TCGPlayer entirely until real API is implemented
+      // 🚨 TCGPlayer: ABSOLUTELY NO MOCK DATA
+      console.log('🚫 TCGPlayer API not implemented - NO MOCK DATA GENERATED');
 
-      // Calculate average price from REAL data only
+      // 🚨 FINAL PRICE CALCULATION
       const averagePrice = priceComparisons.length > 0
         ? priceComparisons.reduce((sum, price) => sum + price.price, 0) / priceComparisons.length
         : 0;
 
-      console.log(`🔍 PRICE LOOKUP RESULTS:`);
+      console.log(`🔍 FINAL PRICE RESULTS:`);
       console.log(`- Total REAL price comparisons: ${priceComparisons.length}`);
       console.log(`- Average price from REAL data: $${averagePrice.toFixed(2)}`);
-      console.log(`- NO MOCK DATA USED`);
+      console.log(`- Estimated value to be saved: $${averagePrice.toFixed(2)}`);
+      
+      if (averagePrice === 0) {
+        console.log('✅ NO MOCK DATA - Card will have $0.00 estimated value');
+      } else {
+        console.log('✅ REAL PRICE DATA - Card will have real market value');
+      }
 
-      return {
+      // 🚨 GUARANTEE: Return exactly what will be saved to database
+      const result = {
         priceComparisons,
         averagePrice,
-        estimatedValue: averagePrice // Will be 0 if no real data available
+        estimatedValue: averagePrice // This exact value goes to the database
       };
+
+      console.log('🚨 RETURNING PRICE RESULT:', result);
+      return result;
 
     } catch (error) {
       console.error('❌ Error getting price comparisons:', error);
-      return {
+      const errorResult = {
         priceComparisons: [],
         averagePrice: 0,
         estimatedValue: 0
       };
+      console.log('🚨 ERROR RESULT (NO MOCK DATA):', errorResult);
+      return errorResult;
     }
   }
 
@@ -127,6 +144,8 @@ class PriceService {
         const url = item.viewItemURL[0];
         const endTime = item.listingInfo[0].endTime[0];
 
+        console.log(`🔍 eBay Price Found: $${price} - ${title.substring(0, 50)}...`);
+
         return {
           source: 'eBay (Sold)',
           price: price,
@@ -147,21 +166,15 @@ class PriceService {
   }
 
   /**
-   * Get TCGPlayer prices for a card (NOT IMPLEMENTED - NO MOCK DATA)
+   * Get TCGPlayer prices for a card (ABSOLUTELY NO MOCK DATA)
    */
   async getTCGPlayerPrices(cardData) {
-    console.log('⚠️ TCGPlayer API integration not implemented');
-    console.log('🚫 NO MOCK DATA WILL BE GENERATED');
-    
-    // Return empty array - NO MOCK DATA
+    console.log('🚫 TCGPlayer API integration not implemented');
+    console.log('🚫 ABSOLUTELY NO MOCK DATA WILL BE GENERATED');
+    console.log('🚫 RETURNING EMPTY ARRAY');
+
+    // 🚨 GUARANTEE: Return empty array - NO MOCK DATA EVER
     return [];
-    
-    // TODO: Implement real TCGPlayer API integration here
-    // This would require:
-    // 1. TCGPlayer API credentials
-    // 2. Proper API endpoints
-    // 3. Authentication handling
-    // 4. Real price data parsing
   }
 }
 
