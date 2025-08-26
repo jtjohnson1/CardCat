@@ -8,6 +8,7 @@ const processingRoutes = require('./processing');
 const cardsRoutes = require('./cards');
 const dashboardRoutes = require('./dashboard');
 const pricesRoutes = require('./prices');
+const settingsRoutes = require('./settings');
 
 // Home route
 router.get("/", (req, res) => {
@@ -106,5 +107,6 @@ router.use('/api/processing', processingRoutes);
 router.use('/api/cards', cardsRoutes);
 router.use('/api/dashboard', dashboardRoutes);
 router.use('/api/prices', pricesRoutes);
+router.use('/api/settings', settingsRoutes);
 
 module.exports = router;

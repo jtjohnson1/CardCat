@@ -1,38 +1,54 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
-import { Separator } from "../components/ui/separator"
-import { Badge } from "../components/ui/badge"
-import { Switch } from "../components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
+import { Badge } from "../components/ui/badge"
+import { Separator } from "../components/ui/separator"
+import { Switch } from "../components/ui/switch"
 import {
   Settings as SettingsIcon,
-  Key,
+  Globe,
+  Brain,
   Database,
+  Save,
+  CheckCircle,
+  AlertCircle,
+  RefreshCw,
+  Key,
   Image,
   Trash2,
   Download,
-  Upload,
-  AlertCircle,
-  CheckCircle
+  Upload
 } from "lucide-react"
+import { getEbaySettings, saveEbaySettings, getOllamaSettings, saveOllamaSettings } from "../api/settings"
 import { useToast } from "../hooks/useToast"
 
+interface EbaySettings {
+  appId: string
+  certId: string
+  devId: string
+  configured: boolean
+}
+
+interface OllamaSettings {
+  url: string
+  model: string
+  configured: boolean
+}
+
 export function Settings() {
-  const [ebaySettings, setEbaySettings] = useState({
-    developerId: "",
-    appId: "",
-    certId: "",
-    token: "",
-    sandbox: false
+  const [ebaySettings, setEbaySettings] = useState<EbaySettings>({
+    appId: '',
+    certId: '',
+    devId: '',
+    configured: false
   })
-  const [ollamaSettings, setOllamaSettings] = useState({
-    host: "localhost",
-    port: "11434",
-    model: "llava:latest",
-    gpuEnabled: true
+  const [ollamaSettings, setOllamaSettings] = useState<OllamaSettings>({
+    url: 'http://localhost:11434',
+    model: 'llava',
+    configured: false
   })
   const [processingSettings, setProcessingSettings] = useState({
     imageQuality: "high",
@@ -40,22 +56,99 @@ export function Settings() {
     autoProcess: false,
     saveOriginals: true
   })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const { toast } = useToast()
 
-  const handleSaveEbaySettings = () => {
-    console.log('Saving eBay settings:', ebaySettings)
-    toast({
-      title: "Settings Saved",
-      description: "eBay API configuration has been updated"
-    })
+  useEffect(() => {
+    loadSettings()
+  }, [])
+
+  const loadSettings = async () => {
+    setLoading(true)
+    try {
+      console.log('Loading settings...')
+
+      const [ebayData, ollamaData] = await Promise.all([
+        getEbaySettings(),
+        getOllamaSettings()
+      ])
+
+      setEbaySettings(ebayData)
+      setOllamaSettings(ollamaData)
+
+      console.log('Settings loaded successfully')
+    } catch (error) {
+      console.error('Failed to load settings:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load settings",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleSaveOllamaSettings = () => {
-    console.log('Saving Ollama settings:', ollamaSettings)
-    toast({
-      title: "Settings Saved",
-      description: "Ollama configuration has been updated"
-    })
+  const handleSaveEbaySettings = async () => {
+    setSaving(true)
+    try {
+      console.log('Saving eBay settings...')
+
+      const result = await saveEbaySettings({
+        appId: ebaySettings.appId,
+        certId: ebaySettings.certId,
+        devId: ebaySettings.devId
+      })
+
+      setEbaySettings(prev => ({ ...prev, configured: result.configured }))
+
+      toast({
+        title: "Success",
+        description: "eBay API settings saved successfully"
+      })
+
+      console.log('eBay settings saved successfully')
+    } catch (error) {
+      console.error('Failed to save eBay settings:', error)
+      toast({
+        title: "Error",
+        description: `Failed to save eBay settings: ${error instanceof Error ? error.message : String(error)}`,
+        variant: "destructive"
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSaveOllamaSettings = async () => {
+    setSaving(true)
+    try {
+      console.log('Saving Ollama settings...')
+
+      const result = await saveOllamaSettings({
+        url: ollamaSettings.url,
+        model: ollamaSettings.model
+      })
+
+      setOllamaSettings(prev => ({ ...prev, configured: result.configured }))
+
+      toast({
+        title: "Success",
+        description: "Ollama settings saved successfully"
+      })
+
+      console.log('Ollama settings saved successfully')
+    } catch (error) {
+      console.error('Failed to save Ollama settings:', error)
+      toast({
+        title: "Error",
+        description: `Failed to save Ollama settings: ${error instanceof Error ? error.message : String(error)}`,
+        variant: "destructive"
+      })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleSaveProcessingSettings = () => {
@@ -63,14 +156,6 @@ export function Settings() {
     toast({
       title: "Settings Saved",
       description: "Processing preferences have been updated"
-    })
-  }
-
-  const handleTestConnection = (service: string) => {
-    console.log('Testing connection for:', service)
-    toast({
-      title: "Connection Test",
-      description: `Testing ${service} connection...`
     })
   }
 
@@ -82,6 +167,27 @@ export function Settings() {
     })
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-in fade-in-50 duration-500">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Settings
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Configure your CardCat application
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <RefreshCw className="w-8 h-8 animate-spin mr-4" />
+          <span>Loading settings...</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in-50 duration-500">
       <div className="flex items-center justify-between">
@@ -90,170 +196,219 @@ export function Settings() {
             Settings
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Configure your CardCataloger application
+            Configure your CardCat application
           </p>
         </div>
+        <Button onClick={loadSettings} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
       <Tabs defaultValue="ebay" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="ebay">eBay API</TabsTrigger>
-          <TabsTrigger value="ollama">Ollama</TabsTrigger>
-          <TabsTrigger value="processing">Processing</TabsTrigger>
-          <TabsTrigger value="database">Database</TabsTrigger>
+          <TabsTrigger value="ebay" className="flex items-center gap-2">
+            <Globe className="w-4 h-4" />
+            eBay API
+          </TabsTrigger>
+          <TabsTrigger value="ollama" className="flex items-center gap-2">
+            <Brain className="w-4 h-4" />
+            Ollama
+          </TabsTrigger>
+          <TabsTrigger value="processing" className="flex items-center gap-2">
+            <SettingsIcon className="w-4 h-4" />
+            Processing
+          </TabsTrigger>
+          <TabsTrigger value="database" className="flex items-center gap-2">
+            <Database className="w-4 h-4" />
+            Database
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="ebay" className="space-y-4">
-          <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="w-5 h-5" />
-                eBay API Configuration
-              </CardTitle>
-              <CardDescription>
-                Configure your eBay Developer credentials for price comparisons
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="w-5 h-5" />
+                    eBay API Configuration
+                  </CardTitle>
+                  <CardDescription>
+                    Configure your eBay Developer Program credentials for price comparisons
+                  </CardDescription>
+                </div>
+                <Badge variant={ebaySettings.configured ? "default" : "secondary"}>
+                  {ebaySettings.configured ? (
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                  ) : (
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                  )}
+                  {ebaySettings.configured ? 'Configured' : 'Not Configured'}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="developerId">Developer ID</Label>
-                  <Input
-                    id="developerId"
-                    placeholder="Enter your eBay Developer ID"
-                    value={ebaySettings.developerId}
-                    onChange={(e) => setEbaySettings({...ebaySettings, developerId: e.target.value})}
-                    className="bg-white dark:bg-gray-800"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="appId">Application ID</Label>
-                  <Input
-                    id="appId"
-                    placeholder="Enter your Application ID"
-                    value={ebaySettings.appId}
-                    onChange={(e) => setEbaySettings({...ebaySettings, appId: e.target.value})}
-                    className="bg-white dark:bg-gray-800"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="certId">Certificate ID</Label>
-                  <Input
-                    id="certId"
-                    placeholder="Enter your Certificate ID"
-                    value={ebaySettings.certId}
-                    onChange={(e) => setEbaySettings({...ebaySettings, certId: e.target.value})}
-                    className="bg-white dark:bg-gray-800"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="token">User Token</Label>
-                  <Input
-                    id="token"
-                    type="password"
-                    placeholder="Enter your User Token"
-                    value={ebaySettings.token}
-                    onChange={(e) => setEbaySettings({...ebaySettings, token: e.target.value})}
-                    className="bg-white dark:bg-gray-800"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="ebay-app-id">Application ID (App ID)</Label>
+                <Input
+                  id="ebay-app-id"
+                  type="text"
+                  placeholder="Enter your eBay App ID"
+                  value={ebaySettings.appId}
+                  onChange={(e) => setEbaySettings(prev => ({ ...prev, appId: e.target.value }))}
+                />
+                <p className="text-xs text-gray-500">
+                  Your eBay Application ID from the eBay Developer Program
+                </p>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="sandbox"
-                  checked={ebaySettings.sandbox}
-                  onCheckedChange={(checked) => setEbaySettings({...ebaySettings, sandbox: checked})}
+              <div className="space-y-2">
+                <Label htmlFor="ebay-cert-id">Certificate ID (Cert ID)</Label>
+                <Input
+                  id="ebay-cert-id"
+                  type="text"
+                  placeholder="Enter your eBay Certificate ID"
+                  value={ebaySettings.certId}
+                  onChange={(e) => setEbaySettings(prev => ({ ...prev, certId: e.target.value }))}
                 />
-                <Label htmlFor="sandbox">Use Sandbox Environment</Label>
+                <p className="text-xs text-gray-500">
+                  Your eBay Certificate ID from the eBay Developer Program
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ebay-dev-id">Developer ID (Dev ID)</Label>
+                <Input
+                  id="ebay-dev-id"
+                  type="text"
+                  placeholder="Enter your eBay Developer ID"
+                  value={ebaySettings.devId}
+                  onChange={(e) => setEbaySettings(prev => ({ ...prev, devId: e.target.value }))}
+                />
+                <p className="text-xs text-gray-500">
+                  Your eBay Developer ID from the eBay Developer Program
+                </p>
               </div>
 
               <Separator />
 
-              <div className="flex items-center gap-2">
-                <Button onClick={handleSaveEbaySettings} className="bg-gradient-to-r from-blue-500 to-purple-600">
-                  Save Configuration
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Save Configuration</p>
+                  <p className="text-xs text-gray-500">
+                    Settings will be saved to the server environment file
+                  </p>
+                </div>
+                <Button
+                  onClick={handleSaveEbaySettings}
+                  disabled={saving || !ebaySettings.appId || !ebaySettings.certId || !ebaySettings.devId}
+                >
+                  {saving ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save eBay Settings
                 </Button>
-                <Button variant="outline" onClick={() => handleTestConnection('eBay')}>
-                  Test Connection
-                </Button>
-                <Badge variant="outline" className="ml-auto">
-                  <AlertCircle className="w-3 h-3 mr-1" />
-                  Not Connected
-                </Badge>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <h4 className="text-sm font-medium mb-2">How to get eBay API credentials:</h4>
+                <ol className="text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                  <li>1. Visit the eBay Developer Program website</li>
+                  <li>2. Create a developer account or sign in</li>
+                  <li>3. Create a new application</li>
+                  <li>4. Copy your App ID, Certificate ID, and Developer ID</li>
+                  <li>5. Paste them into the fields above and save</li>
+                </ol>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="ollama" className="space-y-4">
-          <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Image className="w-5 h-5" />
-                Ollama Configuration
-              </CardTitle>
-              <CardDescription>
-                Configure Ollama AI service for image recognition
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Brain className="w-5 h-5" />
+                    Ollama Configuration
+                  </CardTitle>
+                  <CardDescription>
+                    Configure Ollama AI service for card image analysis
+                  </CardDescription>
+                </div>
+                <Badge variant={ollamaSettings.configured ? "default" : "secondary"}>
+                  {ollamaSettings.configured ? (
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                  ) : (
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                  )}
+                  {ollamaSettings.configured ? 'Configured' : 'Not Configured'}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="host">Host</Label>
-                  <Input
-                    id="host"
-                    placeholder="localhost"
-                    value={ollamaSettings.host}
-                    onChange={(e) => setOllamaSettings({...ollamaSettings, host: e.target.value})}
-                    className="bg-white dark:bg-gray-800"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="port">Port</Label>
-                  <Input
-                    id="port"
-                    placeholder="11434"
-                    value={ollamaSettings.port}
-                    onChange={(e) => setOllamaSettings({...ollamaSettings, port: e.target.value})}
-                    className="bg-white dark:bg-gray-800"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="ollama-url">Ollama Server URL</Label>
+                <Input
+                  id="ollama-url"
+                  type="text"
+                  placeholder="http://localhost:11434"
+                  value={ollamaSettings.url}
+                  onChange={(e) => setOllamaSettings(prev => ({ ...prev, url: e.target.value }))}
+                />
+                <p className="text-xs text-gray-500">
+                  The URL where your Ollama server is running
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="model">Model</Label>
+                <Label htmlFor="ollama-model">Model Name</Label>
                 <Input
-                  id="model"
-                  placeholder="llava:latest"
+                  id="ollama-model"
+                  type="text"
+                  placeholder="llava"
                   value={ollamaSettings.model}
-                  onChange={(e) => setOllamaSettings({...ollamaSettings, model: e.target.value})}
-                  className="bg-white dark:bg-gray-800"
+                  onChange={(e) => setOllamaSettings(prev => ({ ...prev, model: e.target.value }))}
                 />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="gpu"
-                  checked={ollamaSettings.gpuEnabled}
-                  onCheckedChange={(checked) => setOllamaSettings({...ollamaSettings, gpuEnabled: checked})}
-                />
-                <Label htmlFor="gpu">Enable GPU Acceleration (NVIDIA 3070ti)</Label>
+                <p className="text-xs text-gray-500">
+                  The Ollama model to use for image analysis (e.g., llava, llava:13b)
+                </p>
               </div>
 
               <Separator />
 
-              <div className="flex items-center gap-2">
-                <Button onClick={handleSaveOllamaSettings} className="bg-gradient-to-r from-blue-500 to-purple-600">
-                  Save Configuration
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Save Configuration</p>
+                  <p className="text-xs text-gray-500">
+                    Settings will be saved to the server environment file
+                  </p>
+                </div>
+                <Button
+                  onClick={handleSaveOllamaSettings}
+                  disabled={saving || !ollamaSettings.url || !ollamaSettings.model}
+                >
+                  {saving ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  Save Ollama Settings
                 </Button>
-                <Button variant="outline" onClick={() => handleTestConnection('Ollama')}>
-                  Test Connection
-                </Button>
-                <Badge variant="default" className="ml-auto">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Connected
-                </Badge>
+              </div>
+
+              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                <h4 className="text-sm font-medium mb-2">Recommended Ollama setup:</h4>
+                <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                  <li>• Install Ollama on your system</li>
+                  <li>• Pull the llava model: ollama pull llava</li>
+                  <li>• Start Ollama service</li>
+                  <li>• Test the connection above</li>
+                </ul>
               </div>
             </CardContent>
           </Card>
