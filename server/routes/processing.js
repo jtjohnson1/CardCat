@@ -221,6 +221,7 @@ router.post('/process', async (req, res) => {
 
     const processedCards = [];
     const errors = [];
+    const skippedCards = [];
 
     // Process each card with Ollama
     for (let i = 0; i < fileIds.length; i++) {
@@ -228,6 +229,14 @@ router.post('/process', async (req, res) => {
       console.log(`\n--- Processing card ${i + 1}/${fileIds.length}: ${fileId} ---`);
 
       try {
+        // Check if card already exists in database
+        const existingCard = await Card.findOne({ id: fileId });
+        if (existingCard) {
+          console.log(`⚠️ Card ${fileId} already exists in database, skipping...`);
+          skippedCards.push(fileId);
+          continue;
+        }
+
         // For now, we need to reconstruct the file paths from the fileId
         // This is a limitation of the current design - we should store the full paths
         // For demonstration, let's assume the files are in /opt/cardimg
@@ -288,10 +297,14 @@ router.post('/process', async (req, res) => {
     }
 
     console.log(`\n=== OLLAMA PROCESSING SUMMARY ===`);
-    console.log(`✅ Processing completed. Success: ${processedCards.length}, Errors: ${errors.length}`);
+    console.log(`✅ Processing completed. Success: ${processedCards.length}, Skipped: ${skippedCards.length}, Errors: ${errors.length}`);
 
     if (processedCards.length > 0) {
       console.log(`Sample processed card:`, processedCards[0]);
+    }
+
+    if (skippedCards.length > 0) {
+      console.log(`Skipped cards (already exist):`, skippedCards);
     }
 
     if (errors.length > 0) {
@@ -299,10 +312,13 @@ router.post('/process', async (req, res) => {
     }
 
     res.json({
-      success: processedCards.length > 0,
+      success: processedCards.length > 0 || skippedCards.length > 0,
       processedCount: processedCards.length,
+      skippedCount: skippedCards.length,
       processedCards: processedCards,
-      errors: errors
+      skippedCards: skippedCards,
+      errors: errors,
+      message: `Processed ${processedCards.length} new cards, skipped ${skippedCards.length} existing cards`
     });
 
   } catch (error) {
