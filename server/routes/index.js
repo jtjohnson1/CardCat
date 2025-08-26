@@ -1,13 +1,15 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-// Root path response
+// Import route modules
+const processingRoutes = require('./processing');
+
+// Home route
 router.get("/", (req, res) => {
-  res.status(200).send("Welcome to Your Website!");
+  res.json({ message: "CardCat API Server" });
 });
 
-router.get("/ping", (req, res) => {
-  res.status(200).send("pong");
-});
+// API routes
+router.use('/api/processing', processingRoutes);
 
 module.exports = router;
