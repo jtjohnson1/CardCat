@@ -11,7 +11,7 @@ import { Badge } from "../ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card"
 import { Separator } from "../ui/separator"
-import { ExternalLink, Calendar, Tag, TrendingUp, Loader2 } from "lucide-react"
+import { ExternalLink, Calendar, Tag, TrendingUp, Loader2, AlertCircle } from "lucide-react"
 import { getPriceComparisons } from "../../api/prices"
 import { useToast } from "../../hooks/useToast"
 
@@ -56,6 +56,7 @@ export function CardDetailModal({ card, isOpen, onClose }: CardDetailModalProps)
   const [priceComparisons, setPriceComparisons] = useState<PriceComparison[]>([])
   const [averagePrice, setAveragePrice] = useState<number>(0)
   const [loadingPrices, setLoadingPrices] = useState(false)
+  const [priceMessage, setPriceMessage] = useState<string>('')
   const { toast } = useToast()
 
   useEffect(() => {
@@ -68,6 +69,10 @@ export function CardDetailModal({ card, isOpen, onClose }: CardDetailModalProps)
     if (!card) return
 
     setLoadingPrices(true)
+    setPriceComparisons([])
+    setAveragePrice(0)
+    setPriceMessage('')
+    
     try {
       const result = await getPriceComparisons({
         manufacturer: card.manufacturer,
@@ -75,10 +80,14 @@ export function CardDetailModal({ card, isOpen, onClose }: CardDetailModalProps)
         year: card.year,
         cardNumber: card.cardNumber
       })
-      setPriceComparisons(result.priceComparisons)
-      setAveragePrice(result.averagePrice)
+      
+      setPriceComparisons(result.priceComparisons || [])
+      setAveragePrice(result.averagePrice || 0)
+      setPriceMessage(result.message || '')
+      
     } catch (error) {
       console.error('Failed to load price comparisons:', error)
+      setPriceMessage('Failed to load price comparisons. Please try again later.')
       toast({
         title: "Error",
         description: "Failed to load price comparisons",
@@ -269,37 +278,59 @@ export function CardDetailModal({ card, isOpen, onClose }: CardDetailModalProps)
                       </div>
                     )}
 
-                    <Separator />
-
-                    <div className="space-y-3">
-                      {priceComparisons.map((comparison, index) => (
-                        <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{comparison.source}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {comparison.condition}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-gray-500">
-                              Updated: {new Date(comparison.lastUpdated).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg font-semibold text-green-600">
-                              ${comparison.price.toFixed(2)}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleExternalLink(comparison.url)}
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Button>
-                          </div>
+                    {priceMessage && (
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-5 h-5 text-yellow-600" />
+                          <span className="text-yellow-800 dark:text-yellow-200">{priceMessage}</span>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
+
+                    {priceComparisons.length > 0 && (
+                      <>
+                        <Separator />
+                        <div className="space-y-3">
+                          {priceComparisons.map((comparison, index) => (
+                            <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{comparison.source}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {comparison.condition}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-gray-500">
+                                  Updated: {new Date(comparison.lastUpdated).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <span className="text-lg font-semibold text-green-600">
+                                  ${comparison.price.toFixed(2)}
+                                </span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleExternalLink(comparison.url)}
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {!loadingPrices && priceComparisons.length === 0 && !priceMessage && (
+                      <div className="text-center py-8 text-gray-500">
+                        <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>No price data available</p>
+                        <p className="text-sm mt-2">
+                          Price comparison service is not configured
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>

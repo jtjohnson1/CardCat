@@ -18,46 +18,13 @@ export const getPriceComparisons = async (cardData: {
   year: number
   cardNumber: string
 }) => {
-  // Mocking the response for now
-  return new Promise<{ priceComparisons: PriceComparison[], averagePrice: number }>((resolve) => {
-    setTimeout(() => {
-      const mockPrices: PriceComparison[] = [
-        {
-          source: 'eBay',
-          price: Math.floor(Math.random() * 100) + 10,
-          condition: 'Near Mint',
-          url: `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(cardData.playerName + ' ' + cardData.year + ' ' + cardData.manufacturer)}`,
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          source: 'COMC',
-          price: Math.floor(Math.random() * 80) + 15,
-          condition: 'Excellent',
-          url: `https://www.comc.com/Cards/Baseball/1987/Topps/${cardData.cardNumber}`,
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          source: 'TCGPlayer',
-          price: Math.floor(Math.random() * 90) + 12,
-          condition: 'Lightly Played',
-          url: `https://www.tcgplayer.com/search/all/product?q=${encodeURIComponent(cardData.playerName)}`,
-          lastUpdated: new Date().toISOString()
-        }
-      ]
-
-      const averagePrice = mockPrices.reduce((sum, price) => sum + price.price, 0) / mockPrices.length
-
-      resolve({
-        priceComparisons: mockPrices,
-        averagePrice
-      })
-    }, 1000)
-  })
-
-  // Uncomment the below lines to make an actual API call
-  // try {
-  //   return await api.get('/api/prices/compare', { params: cardData });
-  // } catch (error) {
-  //   throw new Error(error?.response?.data?.error || error.message);
-  // }
+  try {
+    console.log('Making API call to get price comparisons for:', cardData)
+    const response = await api.get('/api/prices/compare', { params: cardData })
+    console.log('Price comparison API response:', response.data)
+    return response.data
+  } catch (error: any) {
+    console.error('Error fetching price comparisons:', error)
+    throw new Error(error?.response?.data?.message || error.message)
+  }
 }

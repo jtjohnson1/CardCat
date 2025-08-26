@@ -39,21 +39,18 @@ router.get('/compare', async (req, res) => {
         console.error('eBay API error stack:', error.stack);
       }
     } else {
-      console.log('eBay API not configured, skipping...');
+      console.log('eBay API not configured - no API credentials provided');
     }
 
-    // If no real API data, provide mock data as fallback
+    // If no real API data and no eBay config, return empty results
     if (priceComparisons.length === 0) {
-      console.log('No real price data available, using fallback estimates...');
-      priceComparisons.push(
-        {
-          source: 'Market Estimate',
-          price: Math.floor(Math.random() * 50) + 10,
-          condition: 'Various',
-          url: `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(playerName + ' ' + year + ' ' + manufacturer)}`,
-          lastUpdated: new Date().toISOString()
-        }
-      );
+      console.log('No price data available - eBay API not configured');
+      
+      return res.json({
+        priceComparisons: [],
+        averagePrice: 0,
+        message: 'Price comparison service not configured. Please set up eBay API credentials.'
+      });
     }
 
     const averagePrice = priceComparisons.reduce((sum, price) => sum + price.price, 0) / priceComparisons.length;
@@ -159,34 +156,15 @@ async function getEbayPrices({ manufacturer, playerName, year, cardNumber }) {
 router.get('/history/:cardId', async (req, res) => {
   try {
     const { cardId } = req.params;
-    
+
     console.log('\n=== PRICE HISTORY REQUEST ===');
     console.log('Card ID:', cardId);
 
-    // For now, return mock historical data
-    // In a real implementation, this would query a database of historical prices
-    const mockHistory = [];
-    const basePrice = Math.floor(Math.random() * 100) + 20;
-    
-    for (let i = 11; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      
-      const variation = (Math.random() - 0.5) * 0.3; // ±15% variation
-      const price = Math.max(1, basePrice * (1 + variation));
-      
-      mockHistory.push({
-        date: date.toISOString().split('T')[0],
-        price: Math.round(price * 100) / 100,
-        source: 'Market Data'
-      });
-    }
-
-    console.log(`Returning ${mockHistory.length} historical price points`);
-
+    // Return empty history since we're removing mock data
     res.json({
       cardId,
-      priceHistory: mockHistory
+      priceHistory: [],
+      message: 'Price history feature not yet implemented'
     });
 
   } catch (error) {
