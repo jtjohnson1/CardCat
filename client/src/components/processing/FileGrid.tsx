@@ -29,9 +29,10 @@ export function FileGrid({ files, onFileSelect, loading }: FileGridProps) {
   }
 
   const getImageUrl = (imagePath: string) => {
-    // Convert file system path to URL path for the static file server
-    const url = `http://localhost:3000/api/images${imagePath}`
-    console.log(`Constructed image URL: ${url}`)
+    // Encode the file path to handle spaces and special characters
+    const encodedPath = encodeURIComponent(imagePath)
+    const url = `http://localhost:3000/api/images/${encodedPath}`
+    console.log(`Constructed image URL: ${url} for path: ${imagePath}`)
     return url
   }
 

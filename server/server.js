@@ -25,16 +25,6 @@ app.use(cors({}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files (images) from any directory that gets scanned
-// This is a security consideration - in production, you might want to restrict this
-app.use('/api/images', express.static('/', {
-  dotfiles: 'deny',
-  index: false,
-  setHeaders: function (res, path, stat) {
-    res.set('x-timestamp', Date.now())
-  }
-}));
-
 // Database connection
 connectDB();
 
@@ -43,7 +33,7 @@ app.on("error", (error) => {
   console.error(error.stack);
 });
 
-// Basic Routes
+// Basic Routes (includes image serving)
 app.use(basicRoutes);
 
 // If no routes handled the request, it's a 404
