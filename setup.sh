@@ -1,9 +1,12 @@
 #!/bin/bash
 
-# CardCat Application Setup and Launch Script
+# CardCat Setup Script
 # This script configures and launches the CardCat application
 
 set -e  # Exit on any error
+
+echo "=== CardCat Setup Script ==="
+echo ""
 
 # Colors for output
 RED='\033[0;31m'
@@ -12,268 +15,218 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Logging functions
-log_info() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-log_success() {
+# Function to print colored output
+print_status() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
-log_warning() {
+print_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_warning() {
     echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-log_error() {
+print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
+
+# Check if running as root (optional, but recommended for some operations)
+if [[ $EUID -eq 0 ]]; then
+    print_warning "Running as root. This is not required but acceptable."
+fi
 
 # Function to check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Function to check if a service is running
-check_service() {
-    local service_name=$1
-    local check_command=$2
-    
-    log_info "Checking $service_name..."
-    if eval "$check_command" >/dev/null 2>&1; then
-        log_success "$service_name is running"
-        return 0
-    else
-        log_error "$service_name is not running or not accessible"
-        return 1
-    fi
-}
+# Check prerequisites
+print_info "Checking prerequisites..."
 
-# Function to setup environment variables
-setup_environment() {
-    log_info "Setting up environment variables..."
+# Check Node.js
+if command_exists node; then
+    NODE_VERSION=$(node --version)
+    print_status "Node.js is installed: $NODE_VERSION"
+else
+    print_error "Node.js is not installed. Please install Node.js 18+ and rerun this script."
+    exit 1
+fi
+
+# Check npm
+if command_exists npm; then
+    NPM_VERSION=$(npm --version)
+    print_status "npm is installed: $NPM_VERSION"
+else
+    print_error "npm is not installed. Please install npm and rerun this script."
+    exit 1
+fi
+
+# Check MongoDB
+print_info "Checking MongoDB connection..."
+if command_exists mongosh; then
+    # Try to connect to MongoDB
+    if mongosh --eval "db.adminCommand('ping')" --quiet >/dev/null 2>&1; then
+        print_status "MongoDB is accessible via mongosh"
+    else
+        print_error "MongoDB is not accessible. Please start MongoDB and rerun this script."
+        exit 1
+    fi
+elif command_exists mongo; then
+    # Fallback to legacy mongo client
+    if mongo --eval "db.adminCommand('ping')" --quiet >/dev/null 2>&1; then
+        print_status "MongoDB is accessible via mongo"
+    else
+        print_error "MongoDB is not accessible. Please start MongoDB and rerun this script."
+        exit 1
+    fi
+else
+    print_warning "MongoDB client (mongosh/mongo) not found. Assuming MongoDB is running..."
+fi
+
+# Check Ollama with multiple methods
+print_info "Checking Ollama service..."
+
+OLLAMA_RUNNING=false
+OLLAMA_URL="http://localhost:11434"
+
+# Method 1: Check if ollama command exists and list models
+if command_exists ollama; then
+    print_info "Ollama command found. Testing model availability..."
+    if ollama list >/dev/null 2>&1; then
+        print_status "Ollama CLI is working and can list models"
+        OLLAMA_RUNNING=true
+    else
+        print_warning "Ollama CLI exists but cannot list models"
+    fi
+else
+    print_warning "Ollama CLI command not found in PATH"
+fi
+
+# Method 2: Check if Ollama API is responding
+print_info "Testing Ollama API connectivity..."
+if command_exists curl; then
+    # Test API endpoint with timeout
+    if curl -s --connect-timeout 5 --max-time 10 "$OLLAMA_URL/api/tags" >/dev/null 2>&1; then
+        print_status "Ollama API is responding at $OLLAMA_URL"
+        OLLAMA_RUNNING=true
+    else
+        print_warning "Ollama API not responding at $OLLAMA_URL"
+    fi
+elif command_exists wget; then
+    # Fallback to wget
+    if wget -q --timeout=10 --tries=1 -O /dev/null "$OLLAMA_URL/api/tags" >/dev/null 2>&1; then
+        print_status "Ollama API is responding at $OLLAMA_URL"
+        OLLAMA_RUNNING=true
+    else
+        print_warning "Ollama API not responding at $OLLAMA_URL"
+    fi
+else
+    print_warning "Neither curl nor wget available for API testing"
+fi
+
+# Method 3: Check for Ollama process
+if pgrep -f "ollama" >/dev/null 2>&1; then
+    print_status "Ollama process is running"
+    OLLAMA_RUNNING=true
+else
+    print_warning "No Ollama process found"
+fi
+
+# Final Ollama validation
+if [ "$OLLAMA_RUNNING" = true ]; then
+    print_status "Ollama is running and accessible"
     
-    if [ ! -f "server/.env" ]; then
-        log_info "Creating server/.env file..."
-        cat > server/.env << EOF
+    # Check for required model
+    print_info "Checking for required AI model..."
+    if command_exists ollama; then
+        if ollama list | grep -q "llava"; then
+            print_status "Llava model is available"
+        else
+            print_warning "Llava model not found. You may need to run: ollama pull llava"
+        fi
+    fi
+else
+    print_error "Ollama is not running or not accessible."
+    print_info "Please ensure Ollama is installed and running:"
+    print_info "  1. Install Ollama: https://ollama.ai/"
+    print_info "  2. Start Ollama service"
+    print_info "  3. Pull required model: ollama pull llava"
+    print_info "  4. Rerun this setup script"
+    exit 1
+fi
+
+# Setup environment variables
+print_info "Setting up environment variables..."
+
+# Server environment
+SERVER_ENV_FILE="server/.env"
+if [ ! -f "$SERVER_ENV_FILE" ]; then
+    print_info "Creating server environment file..."
+    cat > "$SERVER_ENV_FILE" << EOF
 # Port to listen on
 PORT=3000
 
 # MongoDB database URL
-DATABASE_URL=mongodb://localhost:27017/CardCat
+DATABASE_URL=mongodb://localhost/CardCat
 
-# JWT Secrets (generated automatically)
-JWT_SECRET=$(openssl rand -base64 32)
-REFRESH_TOKEN_SECRET=$(openssl rand -base64 32)
+# JWT secrets (generate your own in production)
+JWT_SECRET=your-jwt-secret-key-here
+REFRESH_TOKEN_SECRET=your-refresh-token-secret-here
 
-# Ollama Configuration
+# Ollama configuration
 OLLAMA_URL=http://localhost:11434
 OLLAMA_MODEL=llava
 
-# eBay API Configuration (to be configured later)
+# eBay API configuration (optional - configure in app settings)
 EBAY_APP_ID=
 EBAY_CERT_ID=
 EBAY_DEV_ID=
-EBAY_USER_TOKEN=
 EOF
-        log_success "Created server/.env file"
-    else
-        log_info "server/.env file already exists"
-    fi
-}
+    print_status "Server environment file created"
+else
+    print_info "Server environment file already exists"
+fi
 
-# Function to install dependencies
-install_dependencies() {
-    log_info "Installing dependencies..."
-    
-    # Install root dependencies
-    if [ -f "package.json" ]; then
-        log_info "Installing root dependencies..."
-        npm install
-        log_success "Root dependencies installed"
-    fi
-    
-    # Install server dependencies
-    if [ -f "server/package.json" ]; then
-        log_info "Installing server dependencies..."
-        cd server
-        npm install
-        cd ..
-        log_success "Server dependencies installed"
-    fi
-    
-    # Install client dependencies
-    if [ -f "client/package.json" ]; then
-        log_info "Installing client dependencies..."
-        cd client
-        npm install
-        cd ..
-        log_success "Client dependencies installed"
-    fi
-}
+# Install dependencies
+print_info "Installing server dependencies..."
+cd server
+if npm install; then
+    print_status "Server dependencies installed"
+else
+    print_error "Failed to install server dependencies"
+    exit 1
+fi
+cd ..
 
-# Function to check MongoDB connection
-check_mongodb() {
-    log_info "Checking MongoDB connection..."
-    
-    # Try to connect to MongoDB
-    if command_exists mongosh; then
-        if mongosh --eval "db.adminCommand('ping')" --quiet >/dev/null 2>&1; then
-            log_success "MongoDB is accessible via mongosh"
-            return 0
-        fi
-    elif command_exists mongo; then
-        if mongo --eval "db.adminCommand('ping')" --quiet >/dev/null 2>&1; then
-            log_success "MongoDB is accessible via mongo"
-            return 0
-        fi
-    fi
-    
-    # Try alternative check using netstat or ss
-    if netstat -ln 2>/dev/null | grep -q ":27017" || ss -ln 2>/dev/null | grep -q ":27017"; then
-        log_success "MongoDB appears to be running on port 27017"
-        return 0
-    fi
-    
-    log_error "MongoDB is not running or not accessible"
-    log_error "Please start MongoDB service before running this script"
-    return 1
-}
+print_info "Installing client dependencies..."
+cd client
+if npm install; then
+    print_status "Client dependencies installed"
+else
+    print_error "Failed to install client dependencies"
+    exit 1
+fi
+cd ..
 
-# Function to check Ollama
-check_ollama() {
-    log_info "Checking Ollama service..."
-    
-    if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
-        log_success "Ollama is running and accessible"
-        
-        # Check if llava model is available
-        if curl -s http://localhost:11434/api/tags | grep -q "llava"; then
-            log_success "Llava model is available"
-        else
-            log_warning "Llava model not found. You may need to pull it with: ollama pull llava"
-        fi
-        return 0
-    else
-        log_error "Ollama is not running or not accessible on port 11434"
-        log_error "Please start Ollama service before running this script"
-        return 1
-    fi
-}
+print_status "Setup completed successfully!"
+echo ""
+print_info "CardCat is ready to run!"
+print_info ""
+print_info "The application will be available at:"
+print_info "  - Frontend: http://localhost:5173"
+print_info "  - Backend API: http://localhost:3000"
+print_info ""
 
-# Function to start the application
-start_application() {
-    log_info "Starting CardCat application..."
-    
-    # Check if we're in development or production mode
-    if [ "$1" = "dev" ] || [ "$1" = "development" ]; then
-        log_info "Starting in development mode..."
-        npm run dev
-    else
-        log_info "Starting in production mode..."
-        npm start
-    fi
-}
-
-# Main execution
-main() {
-    echo "=================================================="
-    echo "       CardCat Application Setup Script"
-    echo "=================================================="
-    echo ""
-    
-    # Check prerequisites
-    log_info "Checking prerequisites..."
-    
-    if ! command_exists node; then
-        log_error "Node.js is not installed. Please install Node.js first."
-        exit 1
-    fi
-    log_success "Node.js is available ($(node --version))"
-    
-    if ! command_exists npm; then
-        log_error "npm is not installed. Please install npm first."
-        exit 1
-    fi
-    log_success "npm is available ($(npm --version))"
-    
-    # Check services
-    if ! check_mongodb; then
-        log_error "MongoDB check failed. Please ensure MongoDB is running."
-        echo ""
-        echo "To start MongoDB:"
-        echo "  - On Ubuntu/Debian: sudo systemctl start mongod"
-        echo "  - On macOS: brew services start mongodb-community"
-        echo "  - On Windows: net start MongoDB"
-        exit 1
-    fi
-    
-    if ! check_ollama; then
-        log_error "Ollama check failed. Please ensure Ollama is running."
-        echo ""
-        echo "To start Ollama:"
-        echo "  - Run: ollama serve"
-        echo "  - Then pull the llava model: ollama pull llava"
-        exit 1
-    fi
-    
-    # Setup environment
-    setup_environment
-    
-    # Install dependencies
-    install_dependencies
-    
-    echo ""
-    log_success "Setup completed successfully!"
-    echo ""
-    
-    # Ask user if they want to start the application
-    read -p "Do you want to start the application now? (y/n): " -n 1 -r
-    echo ""
-    
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        echo ""
-        log_info "Starting CardCat application..."
-        echo ""
-        echo "The application will be available at:"
-        echo "  - Frontend: http://localhost:5173"
-        echo "  - Backend API: http://localhost:3000"
-        echo ""
-        echo "Press Ctrl+C to stop the application"
-        echo ""
-        
-        start_application "$1"
-    else
-        echo ""
-        log_info "Setup complete. To start the application later, run:"
-        echo "  npm start              # Production mode"
-        echo "  npm run dev            # Development mode"
-        echo ""
-        log_info "The application will be available at:"
-        echo "  - Frontend: http://localhost:5173"
-        echo "  - Backend API: http://localhost:3000"
-    fi
-}
-
-# Handle script arguments
-case "$1" in
-    "help"|"-h"|"--help")
-        echo "CardCat Application Setup Script"
-        echo ""
-        echo "Usage: $0 [mode]"
-        echo ""
-        echo "Modes:"
-        echo "  (no argument)  Setup and optionally start in production mode"
-        echo "  dev            Setup and start in development mode"
-        echo "  help           Show this help message"
-        echo ""
-        echo "Prerequisites:"
-        echo "  - Node.js and npm installed"
-        echo "  - MongoDB running on localhost:27017"
-        echo "  - Ollama running on localhost:11434"
-        exit 0
-        ;;
-    *)
-        main "$1"
-        ;;
-esac
+# Ask if user wants to start the application
+read -p "Do you want to start the application now? (y/n): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    print_info "Starting CardCat application..."
+    print_info "Starting in production mode..."
+    exec npm start
+else
+    print_info "You can start the application later by running: npm start"
+    print_info "Make sure MongoDB and Ollama are running before starting the application."
+fi
