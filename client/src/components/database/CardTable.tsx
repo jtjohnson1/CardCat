@@ -109,6 +109,7 @@ export function CardTable({
 
   const handleDeleteClick = (card: CardData) => {
     console.log('\n=== DELETE BUTTON CLICKED IN TABLE ===')
+    console.log('🔴 Individual card delete button clicked!')
     console.log('Card to delete:', {
       _id: card._id,
       id: card.id,
@@ -129,6 +130,7 @@ export function CardTable({
 
   const handleCheckboxChange = (cardId: string, checked: boolean) => {
     console.log('\n=== CHECKBOX CHANGE IN TABLE ===')
+    console.log('🔵 Card checkbox clicked!')
     console.log('Card ID:', cardId)
     console.log('Checked:', checked)
     console.log('onCardSelect function type:', typeof onCardSelect)
@@ -144,6 +146,7 @@ export function CardTable({
 
   const handleSelectAllChange = () => {
     console.log('\n=== SELECT ALL CHANGE IN TABLE ===')
+    console.log('🔵 Select all checkbox clicked!')
     console.log('onSelectAll function type:', typeof onSelectAll)
 
     try {
@@ -171,6 +174,10 @@ export function CardTable({
     )
   }
 
+  console.log('=== RENDERING TABLE WITH CARDS ===')
+  console.log('Total cards to render:', sortedCards.length)
+  console.log('All selected state:', allSelected)
+
   return (
     <Card>
       <CardContent className="p-0">
@@ -181,7 +188,12 @@ export function CardTable({
                 <TableHead className="w-12">
                   <Checkbox
                     checked={allSelected}
-                    onCheckedChange={handleSelectAllChange}
+                    onCheckedChange={(checked) => {
+                      console.log('\n=== SELECT ALL CHECKBOX CLICKED ===')
+                      console.log('🔵 Select all checkbox onCheckedChange fired!')
+                      console.log('Checked value:', checked)
+                      handleSelectAllChange()
+                    }}
                   />
                 </TableHead>
                 <TableHead className="w-32">Images</TableHead>
@@ -269,78 +281,90 @@ export function CardTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedCards.map((card) => (
-                <TableRow key={card._id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedCards.includes(card._id)}
-                      onCheckedChange={(checked) => handleCheckboxChange(card._id, checked as boolean)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <img
-                        src={getImageUrl(card, 'front')}
-                        alt={`${card.playerName} front`}
-                        className="w-12 h-16 object-cover rounded border"
-                        onError={(e) => {
-                          console.error('Failed to load front image:', getImageUrl(card, 'front'))
-                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEMyMiAyMCAyNCAyMiAyNCAyNFYyOEMyNCAzMCAyMiAzMiAyMCAzMkgxNkMxNCAzMiAxMiAzMCAxMiAyOFYyNEMxMiAyMiAxNCAyMCAxNiAyMEgyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
+              {sortedCards.map((card, index) => {
+                console.log(`Rendering card ${index + 1}/${sortedCards.length}: ${card._id} (${card.playerName})`)
+                const isSelected = selectedCards.includes(card._id)
+                console.log(`Card ${card._id} is selected: ${isSelected}`)
+
+                return (
+                  <TableRow key={card._id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <TableCell>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(checked) => {
+                          console.log(`\n=== INDIVIDUAL CHECKBOX CLICKED ===`)
+                          console.log(`🔵 Checkbox for card ${card._id} clicked!`)
+                          console.log(`Checked value:`, checked)
+                          console.log(`Card details:`, { _id: card._id, playerName: card.playerName })
+                          handleCheckboxChange(card._id, checked as boolean)
                         }}
                       />
-                      <img
-                        src={getImageUrl(card, 'back')}
-                        alt={`${card.playerName} back`}
-                        className="w-12 h-16 object-cover rounded border"
-                        onError={(e) => {
-                          console.error('Failed to load back image:', getImageUrl(card, 'back'))
-                          e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEMyMiAyMCAyNCAyMiAyNCAyNFYyOEMyNCAzMCAyMiAzMiAyMCAzMkgxNkMxNCAzMiAxMiAzMCAxMiAyOFYyNEMxMiAyMiAxNCAyMCAxNiAyMEgyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
-                        }}
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">{card.manufacturer}</TableCell>
-                  <TableCell>{card.sport}</TableCell>
-                  <TableCell>{card.setName}</TableCell>
-                  <TableCell>{card.cardNumber}</TableCell>
-                  <TableCell>{card.playerName}</TableCell>
-                  <TableCell>{card.year}</TableCell>
-                  <TableCell>
-                    <span className="font-semibold text-green-600">
-                      ${card.estimatedValue.toFixed(2)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-500">
-                      {new Date(card.processedAt).toLocaleDateString()}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          console.log('View details button clicked for card:', card._id)
-                          onCardDetail(card)
-                        }}
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteClick(card)}
-                        title="Delete Card"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <img
+                          src={getImageUrl(card, 'front')}
+                          alt={`${card.playerName} front`}
+                          className="w-12 h-16 object-cover rounded border"
+                          onError={(e) => {
+                            console.error('Failed to load front image:', getImageUrl(card, 'front'))
+                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEMyMiAyMCAyNCAyMiAyNCAyNFYyOEMyNCAzMCAyMiAzMiAyMCAzMkgxNkMxNCAzMiAxMiAzMCAxMiAyOFYyNEMxMiAyMiAxNCAyMCAxNiAyMEgyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
+                          }}
+                        />
+                        <img
+                          src={getImageUrl(card, 'back')}
+                          alt={`${card.playerName} back`}
+                          className="w-12 h-16 object-cover rounded border"
+                          onError={(e) => {
+                            console.error('Failed to load back image:', getImageUrl(card, 'back'))
+                            e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEMyMiAyMCAyNCAyMiAyNCAyNFYyOEMyNCAzMCAyMiAzMiAyMCAzMkgxNkMxNCAzMiAxMiAzMCAxMiAyOFYyNEMxMiAyMiAxNCAyMCAxNiAyMEgyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
+                          }}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{card.manufacturer}</TableCell>
+                    <TableCell>{card.sport}</TableCell>
+                    <TableCell>{card.setName}</TableCell>
+                    <TableCell>{card.cardNumber}</TableCell>
+                    <TableCell>{card.playerName}</TableCell>
+                    <TableCell>{card.year}</TableCell>
+                    <TableCell>
+                      <span className="font-semibold text-green-600">
+                        ${card.estimatedValue.toFixed(2)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-gray-500">
+                        {new Date(card.processedAt).toLocaleDateString()}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            console.log('View details button clicked for card:', card._id)
+                            onCardDetail(card)
+                          }}
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(card)}
+                          title="Delete Card"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>

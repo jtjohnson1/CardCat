@@ -82,6 +82,16 @@ export function CardDatabase() {
     filterCards()
   }, [cards, searchQuery, filters])
 
+  // Add useEffect to log state changes
+  useEffect(() => {
+    console.log('\n=== STATE CHANGE LOG ===')
+    console.log('selectedCards changed:', selectedCards)
+    console.log('selectedCards length:', selectedCards.length)
+    console.log('showDeleteDialog:', showDeleteDialog)
+    console.log('cardToDelete:', cardToDelete)
+    console.log('=== END STATE CHANGE LOG ===\n')
+  }, [selectedCards, showDeleteDialog, cardToDelete])
+
   const loadCards = async () => {
     console.log('=== loadCards function called ===')
     setLoading(true)
@@ -223,10 +233,11 @@ export function CardDatabase() {
 
   const handleDeleteSelected = () => {
     console.log('\n=== HANDLE DELETE SELECTED BUTTON CLICKED ===')
-    console.log('Delete selected button clicked!')
+    console.log('🔴 DELETE SELECTED BUTTON CLICKED!')
     console.log('Current selectedCards:', selectedCards)
     console.log('Selected cards count:', selectedCards.length)
     console.log('Button should be visible?', selectedCards.length > 0)
+    console.log('Current showDeleteDialog state:', showDeleteDialog)
     
     if (selectedCards.length === 0) {
       console.log('❌ No cards selected, showing toast')
@@ -238,14 +249,20 @@ export function CardDatabase() {
       return
     }
     
-    console.log('✅ Cards selected, showing delete dialog')
+    console.log('✅ Cards selected, attempting to show delete dialog')
     console.log('Setting showDeleteDialog to true...')
-    setShowDeleteDialog(true)
-    console.log('showDeleteDialog should now be true')
+    
+    try {
+      setShowDeleteDialog(true)
+      console.log('✅ setShowDeleteDialog(true) called successfully')
+    } catch (error) {
+      console.error('❌ Error setting showDeleteDialog:', error)
+    }
   }
 
   const handleDeleteCard = (cardId: string) => {
     console.log('\n=== HANDLE DELETE CARD CALLED ===')
+    console.log('🔴 SINGLE CARD DELETE CLICKED!')
     console.log('Card ID to delete:', cardId)
     console.log('Card ID type:', typeof cardId)
     console.log('Card ID length:', cardId?.length)
@@ -265,10 +282,14 @@ export function CardDatabase() {
     }
 
     console.log('Setting cardToDelete and showing delete dialog...')
-    setCardToDelete(cardId)
-    setSelectedCards([cardId])
-    setShowDeleteDialog(true)
-    console.log('✅ Delete dialog should now be visible')
+    try {
+      setCardToDelete(cardId)
+      setSelectedCards([cardId])
+      setShowDeleteDialog(true)
+      console.log('✅ Delete dialog state should now be set')
+    } catch (error) {
+      console.error('❌ Error setting delete dialog state:', error)
+    }
   }
 
   const confirmDelete = async () => {
@@ -439,12 +460,26 @@ export function CardDatabase() {
             {selectedCards.length > 0 && (
               <Button
                 variant="destructive"
-                onClick={() => {
+                onClick={(e) => {
                   console.log('\n=== DELETE SELECTED BUTTON CLICKED IN JSX ===')
-                  console.log('Button onClick handler triggered')
+                  console.log('🔴 Button onClick event fired!')
+                  console.log('Event object:', e)
+                  console.log('Event type:', e.type)
+                  console.log('Button element:', e.currentTarget)
                   console.log('About to call handleDeleteSelected...')
-                  handleDeleteSelected()
-                  console.log('handleDeleteSelected call completed')
+                  
+                  try {
+                    handleDeleteSelected()
+                    console.log('✅ handleDeleteSelected call completed')
+                  } catch (error) {
+                    console.error('❌ Error in handleDeleteSelected:', error)
+                  }
+                }}
+                onMouseDown={() => {
+                  console.log('🔴 DELETE BUTTON MOUSE DOWN EVENT')
+                }}
+                onMouseUp={() => {
+                  console.log('🔴 DELETE BUTTON MOUSE UP EVENT')
                 }}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
