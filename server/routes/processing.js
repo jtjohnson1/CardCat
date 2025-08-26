@@ -202,7 +202,7 @@ router.get('/directory', async (req, res) => {
   }
 });
 
-// POST /api/processing/process - Process selected card files
+// POST /api/processing/process - Process selected card files using Ollama
 router.post('/process', async (req, res) => {
   try {
     const { fileIds } = req.body;
@@ -221,15 +221,13 @@ router.post('/process', async (req, res) => {
     const processedCards = [];
     const errors = [];
 
-    // Process each card with Ollama
+    // Process each card with Ollama - NO MOCK DATA
     for (let i = 0; i < fileIds.length; i++) {
       const fileId = fileIds[i];
       console.log(`\n--- Processing card ${i + 1}/${fileIds.length}: ${fileId} ---`);
 
       try {
-        // For now, we need to reconstruct the file paths from the fileId
-        // This is a limitation of the current design - we should store the full paths
-        // For demonstration, let's assume the files are in /opt/cardimg
+        // Construct file paths based on the fileId
         const frontImagePath = `/opt/cardimg/${fileId}-front.jpg`;
         const backImagePath = `/opt/cardimg/${fileId}-back.jpg`;
 
@@ -247,7 +245,7 @@ router.post('/process', async (req, res) => {
           throw new Error(`Front image not found: ${frontImagePath}`);
         }
 
-        // Analyze front image with Ollama
+        // Analyze front image with Ollama - REAL PROCESSING ONLY
         console.log(`Analyzing front image with Ollama...`);
         const frontAnalysis = await ollamaService.analyzeCardImage(frontImagePath, false);
 
@@ -282,15 +280,16 @@ router.post('/process', async (req, res) => {
 
     console.log(`\n=== OLLAMA PROCESSING SUMMARY ===`);
     console.log(`✅ Processing completed. Success: ${processedCards.length}, Errors: ${errors.length}`);
-    
+
     if (processedCards.length > 0) {
       console.log(`Sample processed card:`, processedCards[0]);
     }
-    
+
     if (errors.length > 0) {
       console.log(`Errors:`, errors);
     }
 
+    // Return results - NO MOCK DATA, only real Ollama results
     res.json({
       success: processedCards.length > 0,
       processedCount: processedCards.length,
