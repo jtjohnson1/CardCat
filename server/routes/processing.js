@@ -14,24 +14,24 @@ const findCardPairs = (files, directoryPath) => {
   console.log(`\n=== CARD PAIRING DEBUG ===`);
   console.log(`Total files to analyze: ${files.length}`);
   console.log(`Files found:`, files);
-  
+
   const pairs = [];
-  
+
   // Look for files that contain 'front' in their name
   const frontFiles = files.filter(f => {
     const isFront = f.toLowerCase().includes('front');
     console.log(`File "${f}" contains 'front': ${isFront}`);
     return isFront;
   });
-  
+
   console.log(`Found ${frontFiles.length} potential front files:`, frontFiles);
 
   frontFiles.forEach(frontFile => {
     console.log(`\n--- Processing front file: ${frontFile} ---`);
-    
+
     // Try different patterns to find the matching back file
     let backFile = null;
-    
+
     // Pattern 1: Replace 'front' with 'back' (case insensitive)
     const pattern1 = frontFile.replace(/front/gi, 'back');
     console.log(`Pattern 1 (replace front with back): ${pattern1}`);
@@ -39,7 +39,7 @@ const findCardPairs = (files, directoryPath) => {
       backFile = pattern1;
       console.log(`✓ Found back file using pattern 1: ${backFile}`);
     }
-    
+
     // Pattern 2: Replace '-front.' with '-back.'
     if (!backFile) {
       const pattern2 = frontFile.replace(/-front\./gi, '-back.');
@@ -49,7 +49,7 @@ const findCardPairs = (files, directoryPath) => {
         console.log(`✓ Found back file using pattern 2: ${backFile}`);
       }
     }
-    
+
     // Pattern 3: Replace '_front.' with '_back.'
     if (!backFile) {
       const pattern3 = frontFile.replace(/_front\./gi, '_back.');
@@ -59,7 +59,7 @@ const findCardPairs = (files, directoryPath) => {
         console.log(`✓ Found back file using pattern 3: ${backFile}`);
       }
     }
-    
+
     // Pattern 4: Replace 'Front' with 'Back' (exact case)
     if (!backFile) {
       const pattern4 = frontFile.replace(/Front/g, 'Back');
@@ -81,10 +81,17 @@ const findCardPairs = (files, directoryPath) => {
       console.log(`  Front path: ${frontPath}`);
       console.log(`  Back path: ${backPath}`);
 
+      // Create image URLs for serving
+      const frontImageUrl = `/api/images/${encodeURIComponent(frontPath)}`;
+      const backImageUrl = `/api/images/${encodeURIComponent(backPath)}`;
+
+      console.log(`  Front image URL: ${frontImageUrl}`);
+      console.log(`  Back image URL: ${backImageUrl}`);
+
       pairs.push({
         id: id,
-        frontImage: frontPath,
-        backImage: backPath,
+        frontImage: frontImageUrl,
+        backImage: backImageUrl,
         filename: frontFile,
         valid: true,
         selected: false
@@ -111,7 +118,7 @@ const scanDirectory = async (dirPath, includeSubdirectories = false) => {
     console.log(`\n=== DIRECTORY SCANNING ===`);
     console.log(`Scanning directory: ${dirPath}`);
     console.log(`Include subdirectories: ${includeSubdirectories}`);
-    
+
     const items = await fs.readdir(dirPath, { withFileTypes: true });
     console.log(`Found ${items.length} items in directory`);
 
@@ -131,11 +138,12 @@ const scanDirectory = async (dirPath, includeSubdirectories = false) => {
         }
       }
     }
-    
+
     console.log(`Final file list from ${dirPath}:`, allFiles);
     console.log(`=== END DIRECTORY SCANNING ===\n`);
   } catch (error) {
     console.error(`Error scanning directory ${dirPath}:`, error.message);
+    console.error(`Full error details:`, error);
     throw error;
   }
 
@@ -144,76 +152,113 @@ const scanDirectory = async (dirPath, includeSubdirectories = false) => {
 
 // GET /api/processing/directory - Get directory contents and card image pairs
 router.get('/directory', async (req, res) => {
+  console.log('\n=== PROCESSING DIRECTORY REQUEST START ===');
+  console.log('Request method:', req.method);
+  console.log('Request URL:', req.url);
+  console.log('Request query params:', req.query);
+  console.log('Request headers:', req.headers);
+
   try {
     const { directory, includeSubdirectories } = req.query;
 
-    console.log('\n=== PROCESSING DIRECTORY REQUEST ===');
-    console.log('Request params:', { directory, includeSubdirectories });
+    console.log('Extracted parameters:', { directory, includeSubdirectories });
 
     if (!directory) {
+      console.log('❌ Directory parameter is missing');
       return res.status(400).json({
         error: 'Directory parameter is required'
       });
     }
 
+    console.log(`✓ Directory parameter provided: ${directory}`);
+
     // Check if directory exists
     try {
+      console.log(`Checking if directory exists: ${directory}`);
       const stats = await fs.stat(directory);
+      console.log(`Directory stats:`, {
+        isDirectory: stats.isDirectory(),
+        isFile: stats.isFile(),
+        size: stats.size,
+        mode: stats.mode
+      });
+
       if (!stats.isDirectory()) {
+        console.log('❌ Provided path is not a directory');
         return res.status(400).json({
           error: 'Provided path is not a directory'
         });
       }
-      console.log(`Directory ${directory} exists and is accessible`);
+      console.log(`✓ Directory ${directory} exists and is accessible`);
     } catch (error) {
-      console.error(`Directory access error: ${error.message}`);
+      console.error(`❌ Directory access error:`, error);
+      console.error(`Error code: ${error.code}`);
+      console.error(`Error message: ${error.message}`);
       return res.status(404).json({
         error: 'Directory not found or not accessible',
-        message: error.message
+        message: error.message,
+        code: error.code
       });
     }
 
     // Scan directory for image files
+    console.log('Starting directory scan...');
     const files = await scanDirectory(directory, includeSubdirectories === 'true');
-    console.log(`Scan complete. Found ${files.length} image files total`);
+    console.log(`✓ Scan complete. Found ${files.length} image files total`);
 
     // Find card pairs (front/back combinations)
+    console.log('Starting card pairing...');
     const cardPairs = findCardPairs(files, directory);
-    console.log(`Pairing complete. Found ${cardPairs.length} card pairs`);
+    console.log(`✓ Pairing complete. Found ${cardPairs.length} card pairs`);
 
     const response = {
       files: cardPairs,
       totalCount: cardPairs.length
     };
-    
-    console.log('Sending response:', JSON.stringify(response, null, 2));
-    console.log('=== END PROCESSING DIRECTORY REQUEST ===\n');
+
+    console.log('Final response structure:', {
+      filesCount: response.files.length,
+      totalCount: response.totalCount,
+      sampleFile: response.files[0] || 'No files found'
+    });
+
+    console.log('✓ Sending successful response');
+    console.log('=== PROCESSING DIRECTORY REQUEST END ===\n');
 
     res.json(response);
 
   } catch (error) {
-    console.error('Error processing directory request:', error);
+    console.error('❌ Error processing directory request:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       error: 'Failed to scan directory',
-      message: error.message
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
 
 // POST /api/processing/process - Process selected card files
 router.post('/process', async (req, res) => {
+  console.log('\n=== PROCESSING CARDS REQUEST START ===');
+  console.log('Request method:', req.method);
+  console.log('Request URL:', req.url);
+  console.log('Request body:', req.body);
+  console.log('Request headers:', req.headers);
+
   try {
     const { fileIds } = req.body;
 
-    console.log('Processing cards request:', { fileIds });
+    console.log('Extracted fileIds:', fileIds);
 
     if (!fileIds || !Array.isArray(fileIds)) {
+      console.log('❌ Invalid fileIds parameter');
       return res.status(400).json({
         error: 'fileIds array is required'
       });
     }
 
-    console.log(`Starting to process ${fileIds.length} card files...`);
+    console.log(`✓ Starting to process ${fileIds.length} card files...`);
 
     const processedCards = [];
     const errors = [];
@@ -221,10 +266,11 @@ router.post('/process', async (req, res) => {
     // Process each card (simulate for now)
     for (let i = 0; i < fileIds.length; i++) {
       const fileId = fileIds[i];
-      console.log(`Processing card ${i + 1}/${fileIds.length}: ${fileId}`);
+      console.log(`\n--- Processing card ${i + 1}/${fileIds.length}: ${fileId} ---`);
 
       try {
         // Simulate processing time
+        console.log('Simulating processing delay...');
         await new Promise(resolve => setTimeout(resolve, 500));
 
         // TODO: Replace with actual Ollama processing
@@ -241,28 +287,40 @@ router.post('/process', async (req, res) => {
         };
 
         processedCards.push(mockCardData);
-        console.log(`Successfully processed card: ${fileId}`);
+        console.log(`✓ Successfully processed card: ${fileId}`);
+        console.log(`Card data:`, mockCardData);
 
       } catch (error) {
-        console.error(`Error processing card ${fileId}:`, error.message);
+        console.error(`❌ Error processing card ${fileId}:`, error);
+        console.error(`Error stack:`, error.stack);
         errors.push(`Failed to process ${fileId}: ${error.message}`);
       }
     }
 
-    console.log(`Processing completed. Success: ${processedCards.length}, Errors: ${errors.length}`);
+    console.log(`\n=== PROCESSING SUMMARY ===`);
+    console.log(`✓ Processing completed. Success: ${processedCards.length}, Errors: ${errors.length}`);
+    console.log(`Processed cards:`, processedCards);
+    console.log(`Errors:`, errors);
 
-    res.json({
+    const response = {
       success: true,
       processedCount: processedCards.length,
       processedCards: processedCards,
       errors: errors
-    });
+    };
+
+    console.log('✓ Sending successful processing response');
+    console.log('=== PROCESSING CARDS REQUEST END ===\n');
+
+    res.json(response);
 
   } catch (error) {
-    console.error('Error processing cards:', error);
+    console.error('❌ Error processing cards:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       error: 'Failed to process cards',
-      message: error.message
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });

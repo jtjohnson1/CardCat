@@ -28,21 +28,37 @@ interface ProcessingProgressProps {
 }
 
 export function ProcessingProgress({ status }: ProcessingProgressProps) {
+  console.log('=== PROCESSING PROGRESS DEBUG ===')
+  console.log('Processing status received:', status)
+  console.log('Is processing:', status.isProcessing)
+  console.log('Current card:', status.currentCard)
+  console.log('Progress:', status.completed, '/', status.total)
+  console.log('Speed:', status.speed, 'cards/min')
+  console.log('Estimated time:', status.estimatedTime, 'seconds')
+  console.log('Errors count:', status.errors.length)
+
   const progressPercentage = status.total > 0 ? (status.completed / status.total) * 100 : 0
+  console.log('Calculated progress percentage:', progressPercentage)
 
   const formatTime = (seconds: number) => {
+    console.log('Formatting time for seconds:', seconds)
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
     const secs = Math.floor(seconds % 60)
-    
+
+    let formattedTime = ''
     if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`
+      formattedTime = `${hours}h ${minutes}m ${secs}s`
     } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`
+      formattedTime = `${minutes}m ${secs}s`
     } else {
-      return `${secs}s`
+      formattedTime = `${secs}s`
     }
+    console.log('Formatted time result:', formattedTime)
+    return formattedTime
   }
+
+  console.log('Rendering ProcessingProgress component')
 
   return (
     <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
@@ -137,14 +153,17 @@ export function ProcessingProgress({ status }: ProcessingProgressProps) {
               <CardContent className="p-4">
                 <ScrollArea className="h-32">
                   <div className="space-y-2">
-                    {status.errors.map((error, index) => (
-                      <div key={index}>
-                        <p className="text-sm text-red-800 dark:text-red-200">
-                          {error}
-                        </p>
-                        {index < status.errors.length - 1 && <Separator className="my-2" />}
-                      </div>
-                    ))}
+                    {status.errors.map((error, index) => {
+                      console.log(`Rendering error ${index}:`, error)
+                      return (
+                        <div key={index}>
+                          <p className="text-sm text-red-800 dark:text-red-200">
+                            {error}
+                          </p>
+                          {index < status.errors.length - 1 && <Separator className="my-2" />}
+                        </div>
+                      )
+                    })}
                   </div>
                 </ScrollArea>
               </CardContent>
