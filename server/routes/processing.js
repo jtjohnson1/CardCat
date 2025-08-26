@@ -3,6 +3,7 @@ const router = express.Router();
 const fs = require('fs').promises;
 const path = require('path');
 const ollamaService = require('../services/ollamaService');
+const priceService = require('../services/priceService');
 const Card = require('../models/Card');
 
 // Helper function to check if file is an image
@@ -208,7 +209,7 @@ router.post('/process', async (req, res) => {
   try {
     const { fileIds } = req.body;
 
-    console.log('\n=== PROCESSING CARDS WITH OLLAMA AND MONGODB ===');
+    console.log('\n=== PROCESSING CARDS WITH OLLAMA, PRICE LOOKUP, AND MONGODB ===');
     console.log('Processing cards request:', { fileIds });
 
     if (!fileIds || !Array.isArray(fileIds)) {
@@ -217,13 +218,13 @@ router.post('/process', async (req, res) => {
       });
     }
 
-    console.log(`Starting to process ${fileIds.length} card files with Ollama...`);
+    console.log(`Starting to process ${fileIds.length} card files with Ollama and price lookup...`);
 
     const processedCards = [];
     const errors = [];
     const skippedCards = [];
 
-    // Process each card with Ollama
+    // Process each card with Ollama and price lookup
     for (let i = 0; i < fileIds.length; i++) {
       const fileId = fileIds[i];
       console.log(`\n--- Processing card ${i + 1}/${fileIds.length}: ${fileId} ---`);
@@ -275,6 +276,13 @@ router.post('/process', async (req, res) => {
           backAnalysis?.analysis
         );
 
+        // Get real price data from eBay and TCGPlayer
+        console.log(`Looking up real market prices...`);
+        const priceData = await priceService.getPriceComparisons(cardData);
+        
+        // Use real price data instead of mock data
+        cardData.estimatedValue = priceData.estimatedValue || 0;
+
         // Add metadata
         cardData.id = fileId;
         cardData.processedAt = new Date();
@@ -282,25 +290,29 @@ router.post('/process', async (req, res) => {
         cardData.backImagePath = backImagePath;
 
         // Save to MongoDB
-        console.log(`Saving card to MongoDB...`);
+        console.log(`Saving card to MongoDB with real price data...`);
         const card = new Card(cardData);
         await card.save();
-        console.log(`✅ Card saved to MongoDB with ID: ${card._id}`);
+        console.log(`✅ Card saved to MongoDB with ID: ${card._id}, Estimated Value: $${cardData.estimatedValue.toFixed(2)}`);
 
         processedCards.push(cardData);
-        console.log(`✅ Successfully processed card with Ollama: ${fileId}`);
+        console.log(`✅ Successfully processed card with real pricing: ${fileId}`);
 
       } catch (error) {
-        console.error(`❌ Error processing card ${fileId} with Ollama:`, error.message);
+        console.error(`❌ Error processing card ${fileId}:`, error.message);
         errors.push(`Failed to process ${fileId}: ${error.message}`);
       }
     }
 
-    console.log(`\n=== OLLAMA PROCESSING SUMMARY ===`);
+    console.log(`\n=== PROCESSING SUMMARY ===`);
     console.log(`✅ Processing completed. Success: ${processedCards.length}, Skipped: ${skippedCards.length}, Errors: ${errors.length}`);
 
     if (processedCards.length > 0) {
-      console.log(`Sample processed card:`, processedCards[0]);
+      console.log(`Sample processed card with real pricing:`, {
+        id: processedCards[0].id,
+        playerName: processedCards[0].playerName,
+        estimatedValue: processedCards[0].estimatedValue
+      });
     }
 
     if (skippedCards.length > 0) {
@@ -318,13 +330,13 @@ router.post('/process', async (req, res) => {
       processedCards: processedCards,
       skippedCards: skippedCards,
       errors: errors,
-      message: `Processed ${processedCards.length} new cards, skipped ${skippedCards.length} existing cards`
+      message: `Processed ${processedCards.length} new cards with real pricing, skipped ${skippedCards.length} existing cards`
     });
 
   } catch (error) {
-    console.error('❌ Error in Ollama processing:', error);
+    console.error('❌ Error in card processing:', error);
     res.status(500).json({
-      error: 'Failed to process cards with Ollama',
+      error: 'Failed to process cards',
       message: error.message
     });
   }
