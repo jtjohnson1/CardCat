@@ -6,6 +6,7 @@ const path = require('path');
 // Import route modules
 const processingRoutes = require('./processing');
 const cardsRoutes = require('./cards');
+const dashboardRoutes = require('./dashboard');
 
 // Home route
 router.get("/", (req, res) => {
@@ -102,5 +103,6 @@ router.get('/api/images/*', (req, res) => {
 // API routes
 router.use('/api/processing', processingRoutes);
 router.use('/api/cards', cardsRoutes);
+router.use('/api/dashboard', dashboardRoutes);
 
 module.exports = router;
