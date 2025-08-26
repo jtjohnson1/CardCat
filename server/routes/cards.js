@@ -12,12 +12,13 @@ router.get('/', async (req, res) => {
 
     console.log('Querying database for cards...');
     const cards = await Card.find({}).sort({ createdAt: -1 });
-    
+
     console.log(`✅ Database query completed. Found ${cards.length} cards`);
-    
+
     if (cards.length > 0) {
       console.log('Sample card from database:');
-      console.log('- ID:', cards[0]._id);
+      console.log('- MongoDB _id:', cards[0]._id);
+      console.log('- Custom id:', cards[0].id);
       console.log('- Player:', cards[0].playerName);
       console.log('- Manufacturer:', cards[0].manufacturer);
       console.log('- Front Image Path:', cards[0].frontImagePath);
@@ -44,7 +45,7 @@ router.get('/', async (req, res) => {
     console.error('- Error type:', typeof error);
     console.error('- Error message:', error.message);
     console.error('- Error stack:', error.stack);
-    
+
     res.status(500).json({
       error: 'Failed to fetch cards',
       message: error.message
@@ -57,15 +58,20 @@ router.get('/:id', async (req, res) => {
   try {
     console.log(`\n=== GET CARD BY ID: ${req.params.id} ===`);
 
-    const card = await Card.findOne({ id: req.params.id });
+    // Try to find by MongoDB _id first, then by custom id field
+    let card = await Card.findById(req.params.id);
+    if (!card) {
+      card = await Card.findOne({ id: req.params.id });
+    }
 
     if (!card) {
+      console.log(`Card not found with ID: ${req.params.id}`);
       return res.status(404).json({
         error: 'Card not found'
       });
     }
 
-    console.log(`Found card: ${card.playerName}`);
+    console.log(`Found card: ${card.playerName} (MongoDB _id: ${card._id}, custom id: ${card.id})`);
     res.json(card);
 
   } catch (error) {
@@ -81,23 +87,33 @@ router.get('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     console.log(`\n=== DELETE CARD BY ID: ${req.params.id} ===`);
+    console.log('Received ID type:', typeof req.params.id);
+    console.log('Received ID value:', req.params.id);
 
-    const result = await Card.deleteOne({ id: req.params.id });
+    // Try to delete by MongoDB _id first, then by custom id field
+    let result = await Card.deleteOne({ _id: req.params.id });
+    
+    if (result.deletedCount === 0) {
+      console.log('No card found with MongoDB _id, trying custom id field...');
+      result = await Card.deleteOne({ id: req.params.id });
+    }
 
     if (result.deletedCount === 0) {
+      console.log(`No card found with either _id or id: ${req.params.id}`);
       return res.status(404).json({
         error: 'Card not found'
       });
     }
 
-    console.log(`Deleted card: ${req.params.id}`);
+    console.log(`✅ Successfully deleted card: ${req.params.id} (deleted count: ${result.deletedCount})`);
     res.json({
       success: true,
       message: 'Card deleted successfully'
     });
 
   } catch (error) {
-    console.error('Error deleting card:', error);
+    console.error('❌ Error deleting card:', error);
+    console.error('Error details:', error.message);
     res.status(500).json({
       error: 'Failed to delete card',
       message: error.message
@@ -110,6 +126,7 @@ router.delete('/', async (req, res) => {
   try {
     const { cardIds } = req.body;
     console.log(`\n=== DELETE MULTIPLE CARDS: ${cardIds?.length || 0} cards ===`);
+    console.log('Card IDs to delete:', cardIds);
 
     if (!cardIds || !Array.isArray(cardIds)) {
       return res.status(400).json({
@@ -117,9 +134,15 @@ router.delete('/', async (req, res) => {
       });
     }
 
-    const result = await Card.deleteMany({ id: { $in: cardIds } });
+    // Try to delete by MongoDB _id first, then by custom id field
+    let result = await Card.deleteMany({ _id: { $in: cardIds } });
+    
+    if (result.deletedCount === 0) {
+      console.log('No cards found with MongoDB _ids, trying custom id field...');
+      result = await Card.deleteMany({ id: { $in: cardIds } });
+    }
 
-    console.log(`Deleted ${result.deletedCount} cards`);
+    console.log(`✅ Successfully deleted ${result.deletedCount} cards`);
     res.json({
       success: true,
       deletedCount: result.deletedCount,
@@ -127,7 +150,8 @@ router.delete('/', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error deleting cards:', error);
+    console.error('❌ Error deleting cards:', error);
+    console.error('Error details:', error.message);
     res.status(500).json({
       error: 'Failed to delete cards',
       message: error.message
