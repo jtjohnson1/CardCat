@@ -3,21 +3,9 @@ require('dotenv').config();
 
 const connectDB = async () => {
   try {
-    // Ensure we use lowercase database name to avoid case conflicts
-    let databaseUrl = process.env.DATABASE_URL || 'mongodb://localhost/cardcat';
-    
-    // Force lowercase database name to prevent case conflicts
-    if (databaseUrl.includes('/CardCat')) {
-      databaseUrl = databaseUrl.replace('/CardCat', '/cardcat');
-      console.log('Fixed database URL case sensitivity:', databaseUrl);
-    }
-
-    console.log('Connecting to MongoDB with URL:', databaseUrl);
-    
-    const conn = await mongoose.connect(databaseUrl);
+    const conn = await mongoose.connect(process.env.DATABASE_URL);
 
     console.log(`MongoDB Connected: ${conn.connection.host}`);
-    console.log(`Database name: ${conn.connection.name}`);
 
     // Error handling after initial connection
     mongoose.connection.on('error', err => {

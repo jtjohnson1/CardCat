@@ -1,28 +1,13 @@
 import { useState } from "react"
-import { Card, CardContent } from "../ui/card"
-import { Button } from "../ui/button"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
 import { Checkbox } from "../ui/checkbox"
 import { Badge } from "../ui/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table"
-import {
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Eye,
-  Trash2,
-  AlertCircle
-} from "lucide-react"
+import { Button } from "../ui/button"
+import { Skeleton } from "../ui/skeleton"
+import { Eye, Calendar, DollarSign, Package } from "lucide-react"
 
-interface CardData {
+interface Card {
   _id: string
-  id: string
   manufacturer: string
   sport: string
   setName: string
@@ -30,283 +15,190 @@ interface CardData {
   playerName: string
   team: string
   year: number
-  condition: string
-  specialFeatures: string[]
   estimatedValue: number
-  frontImagePath: string
-  backImagePath: string
-  frontImageUrl?: string
-  backImageUrl?: string
+  frontImage?: string
+  backImage?: string
+  condition?: string
+  specialFeatures?: string[]
   processedAt: string
-  createdAt: string
-  updatedAt: string
 }
 
 interface CardTableProps {
-  cards: CardData[]
+  cards: Card[]
   selectedCards: string[]
   onCardSelect: (cardId: string, selected: boolean) => void
-  onSelectAll: () => void
-  onCardDetail: (card: CardData) => void
-  onDeleteSelected: () => void
-  onDeleteCard: (cardId: string) => void
+  onCardClick: (card: Card) => void
+  loading: boolean
 }
 
-type SortField = keyof CardData
-type SortDirection = 'asc' | 'desc'
+export function CardTable({ cards, selectedCards, onCardSelect, onCardClick, loading }: CardTableProps) {
+  console.log('=== CARD TABLE RENDER DEBUG ===')
+  console.log('Cards prop:', cards)
+  console.log('Cards is array:', Array.isArray(cards))
+  console.log('Cards length:', cards?.length)
+  console.log('Selected cards:', selectedCards)
+  console.log('Selected cards is array:', Array.isArray(selectedCards))
+  console.log('Loading:', loading)
 
-export function CardTable({
-  cards,
-  selectedCards,
-  onCardSelect,
-  onSelectAll,
-  onCardDetail,
-  onDeleteSelected,
-  onDeleteCard
-}: CardTableProps) {
-  const [sortField, setSortField] = useState<SortField>('createdAt')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
+  // Ensure cards is always an array
+  const safeCards = Array.isArray(cards) ? cards : []
+  const safeSelectedCards = Array.isArray(selectedCards) ? selectedCards : []
 
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortDirection('asc')
-    }
-  }
+  console.log('Safe cards:', safeCards.length)
+  console.log('Safe selected cards:', safeSelectedCards.length)
 
-  const sortedCards = [...cards].sort((a, b) => {
-    const aValue = a[sortField]
-    const bValue = b[sortField]
-
-    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
-    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
-    return 0
-  })
-
-  const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return <ArrowUpDown className="w-4 h-4" />
-    return sortDirection === 'asc' ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />
-  }
-
-  const getImageUrl = (card: CardData, type: 'front' | 'back') => {
-    if (type === 'front') {
-      return card.frontImageUrl || `/api/images/${encodeURIComponent(card.frontImagePath)}`
-    } else {
-      return card.backImageUrl || `/api/images/${encodeURIComponent(card.backImagePath)}`
-    }
-  }
-
-  const handleDeleteClick = (card: CardData) => {
-    onDeleteCard(card._id)
-  }
-
-  const handleCheckboxChange = (cardId: string, checked: boolean) => {
-    onCardSelect(cardId, checked)
-  }
-
-  const handleSelectAllChange = () => {
-    onSelectAll()
-  }
-
-  const allSelected = cards.length > 0 && selectedCards.length === cards.length
-
-  if (cards.length === 0) {
+  if (loading) {
+    console.log('Rendering loading skeleton')
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="w-12 h-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-600 mb-2">No Cards Found</h3>
-          <p className="text-gray-500 text-center">
-            No cards match your current filters. Try adjusting your search criteria or process some card images.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <Skeleton key={index} className="h-12 w-full" />
+        ))}
+      </div>
     )
   }
 
-  return (
-    <Card>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={handleSelectAllChange}
-                  />
-                </TableHead>
-                <TableHead className="w-40">Images</TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('manufacturer')}
-                    className="h-auto p-0 font-semibold"
-                  >
-                    Manufacturer {getSortIcon('manufacturer')}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('sport')}
-                    className="h-auto p-0 font-semibold"
-                  >
-                    Sport {getSortIcon('sport')}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('setName')}
-                    className="h-auto p-0 font-semibold"
-                  >
-                    Set Name {getSortIcon('setName')}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('cardNumber')}
-                    className="h-auto p-0 font-semibold"
-                  >
-                    Card # {getSortIcon('cardNumber')}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('playerName')}
-                    className="h-auto p-0 font-semibold"
-                  >
-                    Player {getSortIcon('playerName')}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('year')}
-                    className="h-auto p-0 font-semibold"
-                  >
-                    Year {getSortIcon('year')}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('estimatedValue')}
-                    className="h-auto p-0 font-semibold"
-                  >
-                    Value {getSortIcon('estimatedValue')}
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('processedAt')}
-                    className="h-auto p-0 font-semibold"
-                  >
-                    Processed {getSortIcon('processedAt')}
-                  </Button>
-                </TableHead>
-                <TableHead className="w-24">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedCards.map((card, index) => {
-                const isSelected = selectedCards.includes(card._id)
+  if (safeCards.length === 0) {
+    console.log('Rendering empty state')
+    return (
+      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+        <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+        <p>No cards found in your collection.</p>
+        <p className="text-sm mt-2">
+          Start processing card images to build your collection.
+        </p>
+      </div>
+    )
+  }
 
-                return (
-                  <TableRow key={card._id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <TableCell>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(checked) => handleCheckboxChange(card._id, checked as boolean)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {/* Front Image - Standard trading card aspect ratio 2.5" x 3.5" (5:7) */}
-                        <div className="w-10 h-14 bg-gray-100 rounded border overflow-hidden">
-                          <img
-                            src={getImageUrl(card, 'front')}
-                            alt={`${card.playerName} front`}
-                            className="w-full h-full object-contain"
-                            style={{ aspectRatio: '5/7' }}
-                            onError={(e) => {
-                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNTYiIHZpZXdCb3g9IjAgMCA0MCA1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjU2IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyOEMyMiAyOCAyNCAzMCAyNCAzMlYzNkMyNCAzOCAyMiA0MCAyMCA0MEgxNkMxNCA0MCAxMiAzOCAxMiAzNlYzMkMxMiAzMCAxNCAyOCAxNiAyOEgyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
-                            }}
-                          />
+  console.log('Rendering table with', safeCards.length, 'cards')
+
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-12">
+              <span className="sr-only">Select</span>
+            </TableHead>
+            <TableHead>Card</TableHead>
+            <TableHead>Player</TableHead>
+            <TableHead>Team</TableHead>
+            <TableHead>Set</TableHead>
+            <TableHead>Year</TableHead>
+            <TableHead>Value</TableHead>
+            <TableHead>Condition</TableHead>
+            <TableHead className="w-12">
+              <span className="sr-only">Actions</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {safeCards.map((card, index) => {
+            console.log(`Rendering card ${index}:`, card)
+
+            if (!card || typeof card !== 'object') {
+              console.warn(`Invalid card at index ${index}:`, card)
+              return null
+            }
+
+            const isSelected = safeSelectedCards.includes(card._id)
+
+            return (
+              <TableRow
+                key={card._id || `card-${index}`}
+                className={`cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                  isSelected ? 'bg-blue-50 dark:bg-blue-950/20' : ''
+                }`}
+              >
+                <TableCell>
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={(checked) => {
+                      console.log(`Card selection changed: ${card._id}, selected: ${checked}`)
+                      onCardSelect(card._id, checked as boolean)
+                    }}
+                  />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-16 bg-gray-200 dark:bg-gray-700 rounded border overflow-hidden">
+                      {card.frontImage ? (
+                        <img
+                          src={card.frontImage}
+                          alt={`${card.playerName || 'Unknown'} card`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
+                          No Image
                         </div>
-                        {/* Back Image - Standard trading card aspect ratio 2.5" x 3.5" (5:7) */}
-                        <div className="w-10 h-14 bg-gray-100 rounded border overflow-hidden">
-                          <img
-                            src={getImageUrl(card, 'back')}
-                            alt={`${card.playerName} back`}
-                            className="w-full h-full object-contain"
-                            style={{ aspectRatio: '5/7' }}
-                            onError={(e) => {
-                              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNTYiIHZpZXdCb3g9IjAgMCA0MCA1NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjU2IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyOEMyMiAyOCAyNCAzMCAyNCAzMlYzNkMyNCAzOCAyMiA0MCAyMCA0MEgxNkMxNCA0MCAxMiAzOCAxMiAzNlYzMkMxMiAzMCAxNCAyOCAxNiAyOEgyMFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+'
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{card.manufacturer}</TableCell>
-                    <TableCell>{card.sport}</TableCell>
-                    <TableCell>{card.setName}</TableCell>
-                    <TableCell>{card.cardNumber}</TableCell>
-                    <TableCell>{card.playerName}</TableCell>
-                    <TableCell>{card.year}</TableCell>
-                    <TableCell>
-                      <span className="font-semibold text-green-600">
-                        ${card.estimatedValue.toFixed(2)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-gray-500">
-                        {new Date(card.processedAt).toLocaleDateString()}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onCardDetail(card)}
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClick(card)}
-                          title="Delete Card"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">#{card.cardNumber || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">{card.manufacturer || 'Unknown'}</p>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div>
+                    <p className="font-medium">{card.playerName || 'Unknown Player'}</p>
+                    <div className="flex gap-1 mt-1">
+                      {Array.isArray(card.specialFeatures) && card.specialFeatures.length > 0 ? (
+                        card.specialFeatures.map((feature, idx) => (
+                          <Badge key={idx} variant="secondary" className="text-xs">
+                            {feature}
+                          </Badge>
+                        ))
+                      ) : null}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <span>{card.team || 'Unknown Team'}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {card.sport || 'Unknown'}
+                    </Badge>
+                  </div>
+                </TableCell>
+                <TableCell>{card.setName || 'Unknown Set'}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {card.year || 'Unknown'}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="w-3 h-3" />
+                    {card.estimatedValue ? card.estimatedValue.toFixed(2) : '0.00'}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={card.condition === 'Mint' ? 'default' : 'secondary'}>
+                    {card.condition || 'Unknown'}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      console.log('View card clicked:', card)
+                      onCardClick(card)
+                    }}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </div>
   )
 }

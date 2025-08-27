@@ -2,22 +2,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Slider } from "../ui/slider"
 import { Label } from "../ui/label"
 
-interface CardData {
-  _id: string
-  frontImage: string
-  backImage: string
-  manufacturer: string
-  sport: string
-  setName: string
-  cardNumber: string
-  player: string
-  year: number
-  estimatedValue: number
-  processingDate: string
-  selected?: boolean
-}
-
-interface FilterOptions {
+interface Filters {
   manufacturer: string
   sport: string
   yearRange: [number, number]
@@ -25,40 +10,77 @@ interface FilterOptions {
 }
 
 interface CardFiltersProps {
-  filters: FilterOptions
-  onFiltersChange: (filters: FilterOptions) => void
-  cards: CardData[]
+  filters: Filters
+  onFiltersChange: (filters: Filters) => void
 }
 
-export function CardFilters({ filters, onFiltersChange, cards }: CardFiltersProps) {
-  const manufacturers = Array.from(new Set(cards.map(card => card.manufacturer))).sort()
-  const sports = Array.from(new Set(cards.map(card => card.sport))).sort()
+export function CardFilters({ filters, onFiltersChange }: CardFiltersProps) {
+  console.log('=== CARD FILTERS RENDER DEBUG ===')
+  console.log('Filters prop:', filters)
+  console.log('Filters is object:', typeof filters === 'object')
+  console.log('Year range:', filters?.yearRange)
+  console.log('Value range:', filters?.valueRange)
 
-  const minYear = Math.min(...cards.map(card => card.year))
-  const maxYear = Math.max(...cards.map(card => card.year))
-  const minValue = Math.min(...cards.map(card => card.estimatedValue))
-  const maxValue = Math.max(...cards.map(card => card.estimatedValue))
+  // Ensure filters object exists with safe defaults
+  const safeFilters = {
+    manufacturer: filters?.manufacturer || "",
+    sport: filters?.sport || "",
+    yearRange: Array.isArray(filters?.yearRange) ? filters.yearRange : [1980, 2024],
+    valueRange: Array.isArray(filters?.valueRange) ? filters.valueRange : [0, 1000]
+  }
+
+  console.log('Safe filters:', safeFilters)
+
+  const manufacturers = [
+    "Topps",
+    "Panini",
+    "Upper Deck",
+    "Bowman",
+    "Donruss",
+    "Fleer"
+  ]
+
+  const sports = [
+    "Baseball",
+    "Basketball",
+    "Football",
+    "Hockey",
+    "Soccer"
+  ]
+
+  console.log('Manufacturers array:', manufacturers)
+  console.log('Sports array:', sports)
+
+  const handleFilterChange = (key: keyof Filters, value: any) => {
+    console.log(`Filter change: ${key} = ${value}`)
+    // Convert "all" values back to empty strings for filtering logic
+    const filterValue = value === "all-manufacturers" || value === "all-sports" ? "" : value
+    const newFilters = { ...safeFilters, [key]: filterValue }
+    console.log('New filters:', newFilters)
+    onFiltersChange(newFilters)
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <div className="space-y-2">
         <Label>Manufacturer</Label>
         <Select
-          value={filters.manufacturer}
-          onValueChange={(value) =>
-            onFiltersChange({ ...filters, manufacturer: value === "all" ? "" : value })
-          }
+          value={safeFilters.manufacturer || "all-manufacturers"}
+          onValueChange={(value) => handleFilterChange('manufacturer', value)}
         >
-          <SelectTrigger className="bg-white dark:bg-gray-800">
+          <SelectTrigger>
             <SelectValue placeholder="All manufacturers" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All manufacturers</SelectItem>
-            {manufacturers.map((manufacturer) => (
-              <SelectItem key={manufacturer} value={manufacturer}>
-                {manufacturer}
-              </SelectItem>
-            ))}
+            <SelectItem value="all-manufacturers">All manufacturers</SelectItem>
+            {manufacturers.map((manufacturer) => {
+              console.log(`Rendering manufacturer option: ${manufacturer}`)
+              return (
+                <SelectItem key={manufacturer} value={manufacturer}>
+                  {manufacturer}
+                </SelectItem>
+              )
+            })}
           </SelectContent>
         </Select>
       </div>
@@ -66,49 +88,52 @@ export function CardFilters({ filters, onFiltersChange, cards }: CardFiltersProp
       <div className="space-y-2">
         <Label>Sport</Label>
         <Select
-          value={filters.sport}
-          onValueChange={(value) =>
-            onFiltersChange({ ...filters, sport: value === "all" ? "" : value })
-          }
+          value={safeFilters.sport || "all-sports"}
+          onValueChange={(value) => handleFilterChange('sport', value)}
         >
-          <SelectTrigger className="bg-white dark:bg-gray-800">
+          <SelectTrigger>
             <SelectValue placeholder="All sports" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All sports</SelectItem>
-            {sports.map((sport) => (
-              <SelectItem key={sport} value={sport}>
-                {sport}
-              </SelectItem>
-            ))}
+            <SelectItem value="all-sports">All sports</SelectItem>
+            {sports.map((sport) => {
+              console.log(`Rendering sport option: ${sport}`)
+              return (
+                <SelectItem key={sport} value={sport}>
+                  {sport}
+                </SelectItem>
+              )
+            })}
           </SelectContent>
         </Select>
       </div>
 
       <div className="space-y-2">
-        <Label>Year Range: {filters.yearRange[0]} - {filters.yearRange[1]}</Label>
+        <Label>Year Range: {safeFilters.yearRange[0]} - {safeFilters.yearRange[1]}</Label>
         <Slider
-          value={filters.yearRange}
-          onValueChange={(value) =>
-            onFiltersChange({ ...filters, yearRange: value as [number, number] })
-          }
-          min={minYear}
-          max={maxYear}
+          value={safeFilters.yearRange}
+          onValueChange={(value) => {
+            console.log('Year range change:', value)
+            handleFilterChange('yearRange', value as [number, number])
+          }}
+          min={1950}
+          max={2024}
           step={1}
           className="w-full"
         />
       </div>
 
       <div className="space-y-2">
-        <Label>Value Range: ${filters.valueRange[0]} - ${filters.valueRange[1]}</Label>
+        <Label>Value Range: ${safeFilters.valueRange[0]} - ${safeFilters.valueRange[1]}</Label>
         <Slider
-          value={filters.valueRange}
-          onValueChange={(value) =>
-            onFiltersChange({ ...filters, valueRange: value as [number, number] })
-          }
-          min={minValue}
-          max={maxValue}
-          step={1}
+          value={safeFilters.valueRange}
+          onValueChange={(value) => {
+            console.log('Value range change:', value)
+            handleFilterChange('valueRange', value as [number, number])
+          }}
+          min={0}
+          max={1000}
+          step={10}
           className="w-full"
         />
       </div>

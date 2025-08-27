@@ -3,82 +3,64 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../co
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from "recharts"
-import {
-  Database,
+  BarChart3,
   TrendingUp,
-  Calendar,
   DollarSign,
+  Package,
+  Clock,
+  Star,
   Activity,
-  RefreshCw,
-  AlertCircle
+  RefreshCw
 } from "lucide-react"
 import { getDashboardStats } from "../api/dashboard"
 import { useToast } from "../hooks/useToast"
 
 interface DashboardStats {
   totalCards: number
+  recentlyAdded: number
   totalValue: number
-  averageValue: number
-  cardsProcessedToday: number
-  cardsByManufacturer: Array<{ _id: string; count: number }>
-  cardsBySport: Array<{ _id: string; count: number }>
-  recentCards: Array<{
-    _id: string
-    playerName: string
-    manufacturer: string
-    year: number
-    estimatedValue: number
-    createdAt: string
-  }>
-  mostValuableCards: Array<{
-    _id: string
-    playerName: string
-    manufacturer: string
-    year: number
-    estimatedValue: number
-    frontImageUrl?: string
-  }>
+  uniqueSets: number
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
+interface RecentActivity {
+  id: string
+  type: string
+  description: string
+  timestamp: string
+}
 
 export function Dashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCards: 0,
+    recentlyAdded: 0,
+    totalValue: 0,
+    uniqueSets: 0
+  })
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
+  const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
-  useEffect(() => {
-    loadDashboardStats()
-  }, [])
-
-  const loadDashboardStats = async () => {
+  const loadDashboardData = async () => {
     setLoading(true)
-    setError(null)
-
     try {
-      console.log('Loading dashboard stats...')
-      const data = await getDashboardStats()
-      console.log('Dashboard stats loaded:', data)
-      setStats(data)
+      const response = await getDashboardStats()
+      console.log('Dashboard response:', response)
+      
+      // Safely extract stats with fallback values
+      const statsData = response.data?.stats || {}
+      setStats({
+        totalCards: statsData.totalCards || 0,
+        recentlyAdded: statsData.recentlyAdded || 0,
+        totalValue: statsData.totalValue || 0,
+        uniqueSets: statsData.uniqueSets || 0
+      })
+      
+      setRecentActivity(response.data?.recentActivity || [])
     } catch (error) {
-      console.error('Failed to load dashboard stats:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load dashboard statistics'
-      setError(errorMessage)
+      console.error('Failed to load dashboard data:', error)
       toast({
         title: "Error",
-        description: errorMessage,
+        description: "Failed to load dashboard statistics",
         variant: "destructive"
       })
     } finally {
@@ -86,59 +68,27 @@ export function Dashboard() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-in fade-in-50 duration-500">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Dashboard
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Overview of your card collection
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center justify-center py-12">
-          <RefreshCw className="w-8 h-8 animate-spin mr-4" />
-          <span>Loading dashboard...</span>
-        </div>
-      </div>
-    )
+  useEffect(() => {
+    loadDashboardData()
+  }, [])
+
+  // Safe number formatting function
+  const formatNumber = (value: number | undefined | null): string => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '0'
+    }
+    return value.toLocaleString()
   }
 
-  if (error || !stats) {
-    return (
-      <div className="space-y-6 animate-in fade-in-50 duration-500">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Dashboard
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Overview of your card collection
-            </p>
-          </div>
-          <Button onClick={loadDashboardStats} variant="outline">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Retry
-          </Button>
-        </div>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">Failed to Load Dashboard</h3>
-            <p className="text-gray-500 text-center mb-4">
-              {error || 'Unable to load dashboard statistics'}
-            </p>
-            <Button onClick={loadDashboardStats}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  // Safe currency formatting function
+  const formatCurrency = (value: number | undefined | null): string => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '$0.00'
+    }
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(value)
   }
 
   return (
@@ -149,205 +99,150 @@ export function Dashboard() {
             Dashboard
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Overview of your card collection
+            Overview of your card collection and recent activity
           </p>
         </div>
-        <Button onClick={loadDashboardStats} variant="outline">
-          <RefreshCw className="w-4 h-4 mr-2" />
+        <Button
+          variant="outline"
+          onClick={loadDashboardData}
+          disabled={loading}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </Button>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      {/* Statistics Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Cards</CardTitle>
-            <Database className="h-4 w-4 text-muted-foreground" />
+            <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCards.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{formatNumber(stats.totalCards)}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.cardsProcessedToday} processed today
+              Cards in your collection
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Recently Added</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatNumber(stats.recentlyAdded)}</div>
+            <p className="text-xs text-muted-foreground">
+              Added this month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Value</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalValue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{formatCurrency(stats.totalValue)}</div>
             <p className="text-xs text-muted-foreground">
-              estimated collection value
+              Estimated collection value
             </p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Value</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Unique Sets</CardTitle>
+            <Star className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.averageValue.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatNumber(stats.uniqueSets)}</div>
             <p className="text-xs text-muted-foreground">
-              per card
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.recentCards.length}</div>
-            <p className="text-xs text-muted-foreground">
-              cards added this week
+              Different card sets
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Cards by Manufacturer */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Cards by Manufacturer</CardTitle>
-            <CardDescription>
-              Distribution of cards across different manufacturers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={stats.cardsByManufacturer}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="_id" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Cards by Sport */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Cards by Sport</CardTitle>
-            <CardDescription>
-              Breakdown of your collection by sport
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={stats.cardsBySport}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ _id, percent }) => `${_id} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="count"
-                >
-                  {stats.cardsBySport.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Cards and Most Valuable */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Cards */}
-        <Card>
+      {/* Recent Activity */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="w-5 h-5" />
-              Recently Added Cards
+              <Activity className="w-5 h-5" />
+              Recent Activity
             </CardTitle>
             <CardDescription>
-              Cards added to your collection this week
+              Latest changes to your collection
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentActivity.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p>No recent activity</p>
+                <p className="text-sm mt-1">
+                  Start processing cards to see activity here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{activity.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(activity.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    <Badge variant="secondary">{activity.type}</Badge>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-sm border-gray-200/50 dark:border-gray-700/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Quick Stats
+            </CardTitle>
+            <CardDescription>
+              Collection overview
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats.recentCards.length > 0 ? (
-                stats.recentCards.slice(0, 5).map((card) => (
-                  <div key={card._id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{card.playerName}</p>
-                      <p className="text-sm text-gray-500">
-                        {card.year} {card.manufacturer}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-green-600">
-                        ${card.estimatedValue.toFixed(2)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(card.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">
-                  No cards added this week
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Most Valuable Cards */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              Most Valuable Cards
-            </CardTitle>
-            <CardDescription>
-              Your highest valued cards
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {stats.mostValuableCards.length > 0 ? (
-                stats.mostValuableCards.map((card) => (
-                  <div key={card._id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <p className="font-medium">{card.playerName}</p>
-                      <p className="text-sm text-gray-500">
-                        {card.year} {card.manufacturer}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-green-600">
-                        ${card.estimatedValue.toFixed(2)}
-                      </p>
-                      <Badge variant="secondary" className="text-xs">
-                        Top Value
-                      </Badge>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">
-                  No cards in collection
-                </p>
-              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Average Card Value</span>
+                <span className="text-sm font-medium">
+                  {stats.totalCards > 0 
+                    ? formatCurrency(stats.totalValue / stats.totalCards)
+                    : formatCurrency(0)
+                  }
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Cards per Set</span>
+                <span className="text-sm font-medium">
+                  {stats.uniqueSets > 0 
+                    ? formatNumber(Math.round(stats.totalCards / stats.uniqueSets))
+                    : formatNumber(0)
+                  }
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Collection Status</span>
+                <Badge variant={stats.totalCards > 0 ? "default" : "secondary"}>
+                  {stats.totalCards > 0 ? "Active" : "Empty"}
+                </Badge>
+              </div>
             </div>
           </CardContent>
         </Card>
